@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Dynamics — Character Pyramid | nnherit</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
+
+  :root{
+    --nn-yellow:#F3D600;
+    --nn-black:#111111;
+    --nn-white:#ffffff;
+    --nn-grey:#f4f4f2;
+    --nn-line:#dcdcd8;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    font-family:'Source Sans Pro', Arial, sans-serif;
+    background:var(--nn-grey);
+    color:var(--nn-black);
+  }
+
+  header{
+    background:var(--nn-black);
+    color:var(--nn-white);
+    padding:22px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+
+  header .brand{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+
+  header .brand .mark{
+    background:var(--nn-yellow);
+    color:var(--nn-black);
+    font-weight:700;
+    padding:2px 8px;
+    border-radius:3px;
+    font-size:0.95rem;
+  }
+
+  header h1{
+    font-size:1.15rem;
+    margin:0;
+    font-weight:600;
+    letter-spacing:0.2px;
+  }
+
+  header .subtitle{
+    font-size:0.85rem;
+    opacity:0.75;
+  }
+
+  main{
+    max-width:1080px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+
+  .intro{
+    background:var(--nn-white);
+    border:1px solid var(--nn-line);
+    border-left:6px solid var(--nn-yellow);
+    border-radius:6px;
+    padding:18px 22px;
+    margin-bottom:28px;
+    line-height:1.5;
+    font-size:0.98rem;
+  }
+
+  .intro strong{ font-weight:700; }
+
+  .intro .steps{
+    margin-top:10px;
+    font-size:0.9rem;
+    opacity:0.85;
+  }
+
+  h2.section-label{
+    font-size:0.8rem;
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+    font-weight:700;
+    color:#555;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .progress-count{
+    background:var(--nn-black);
+    color:var(--nn-white);
+    font-size:0.72rem;
+    padding:3px 10px;
+    border-radius:12px;
+    letter-spacing:0.3px;
+    text-transform:none;
+    font-weight:600;
+  }
+
+  .progress-count.complete{
+    background:var(--nn-yellow);
+    color:var(--nn-black);
+  }
+
+  /* --- Selection banner --- */
+
+  .selection-banner{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:var(--nn-black);
+    color:var(--nn-white);
+    font-size:0.85rem;
+    padding:10px 16px;
+    border-radius:20px;
+    max-width:520px;
+    margin:0 auto 16px;
+    text-align:center;
+  }
+
+  .selection-banner.show{ display:flex; }
+
+  .selection-banner .swatch{
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    flex:none;
+    border:1px solid rgba(255,255,255,0.4);
+  }
+
+  .selection-banner strong{ color:var(--nn-yellow); }
+
+  /* --- Pyramid --- */
+
+  .pyramid-wrap{
+    margin-bottom:36px;
+  }
+
+  .pyramid{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+
+  .pyramid-row{
+    display:flex;
+    gap:14px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  .slot{
+    width:118px;
+    height:160px;
+    border:2px dashed #b9b9b3;
+    border-radius:10px;
+    background:rgba(255,255,255,0.5);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size:0.72rem;
+    color:#8a8a83;
+    padding:6px;
+    transition:background 0.15s, border-color 0.15s, transform 0.1s;
+    position:relative;
+  }
+
+  .slot.filled{
+    border-style:solid;
+    background:transparent;
+    padding:0;
+  }
+
+  .slot.drop-hover{
+    border-color:var(--nn-black);
+    background:#fff9d6;
+  }
+
+  .slot.tap-target{
+    border-color:var(--nn-yellow);
+  }
+
+  .slot .rank-label{
+    position:absolute;
+    top:-10px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--nn-black);
+    color:var(--nn-white);
+    font-size:0.65rem;
+    padding:1px 7px;
+    border-radius:8px;
+    font-weight:600;
+    letter-spacing:0.4px;
+  }
+
+  /* --- Cards --- */
+
+  .card{
+    width:118px;
+    height:160px;
+    border-radius:10px;
+    perspective:800px;
+    cursor:grab;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+    position:relative;
+  }
+
+  .card.dragging{ opacity:0.35; }
+  .card.selected .card-inner{ box-shadow:0 0 0 3px var(--nn-black); }
+  .card.placeholder{ visibility:hidden; }
+
+  .card-inner{
+    width:100%;
+    height:100%;
+    border-radius:10px;
+    position:relative;
+    transform-style:preserve-3d;
+    transition:transform 0.5s;
+    box-shadow:0 2px 6px rgba(0,0,0,0.18);
+  }
+
+  .card.flipped .card-inner{ transform:rotateY(180deg); }
+
+  .face{
+    position:absolute;
+    inset:0;
+    border-radius:10px;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    overflow:hidden;
+  }
+
+  .face img{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:10px;
+  }
+
+  .face.front{
+    border:2px solid var(--card-colour, #ccc);
+  }
+
+  .face.back{
+    transform:rotateY(180deg);
+    border:2px solid var(--card-colour, #ccc);
+  }
+
+  .flip-btn{
+    position:absolute;
+    top:5px;
+    right:5px;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.85);
+    color:#111;
+    border:none;
+    font-size:0.7rem;
+    font-weight:700;
+    line-height:20px;
+    text-align:center;
+    cursor:pointer;
+    z-index:5;
+  }
+
+  .face.front .flip-btn{ background:rgba(255,255,255,0.85); }
+  .face.back .flip-btn{ background:rgba(0,0,0,0.08); }
+
+  /* --- Tray --- */
+
+  .tray{
+    background:var(--nn-white);
+    border:1px solid var(--nn-line);
+    border-radius:8px;
+    padding:18px;
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+
+  /* --- Controls & summary --- */
+
+  .controls{
+    display:flex;
+    justify-content:center;
+    margin:22px 0 10px;
+  }
+
+  button.reset{
+    background:var(--nn-black);
+    color:var(--nn-white);
+    border:none;
+    padding:10px 20px;
+    border-radius:20px;
+    font-size:0.85rem;
+    font-weight:600;
+    cursor:pointer;
+    letter-spacing:0.3px;
+  }
+
+  button.reset:hover{ background:#000; }
+
+  button.copy-result{
+    background:transparent;
+    color:var(--nn-black);
+    border:1.5px solid var(--nn-black);
+    padding:8px 16px;
+    border-radius:20px;
+    font-size:0.8rem;
+    font-weight:600;
+    cursor:pointer;
+    letter-spacing:0.3px;
+    margin-top:10px;
+  }
+
+  button.copy-result:hover{ background:var(--nn-black); color:var(--nn-white); }
+
+  .summary{
+    max-width:520px;
+    margin:24px auto 0;
+    background:var(--nn-white);
+    border:1px solid var(--nn-line);
+    border-radius:8px;
+    padding:16px 20px;
+    font-size:0.9rem;
+    display:none;
+  }
+
+  .summary.show{ display:block; }
+
+  .summary h3{
+    margin:0 0 8px;
+    font-size:0.85rem;
+    text-transform:uppercase;
+    letter-spacing:0.8px;
+  }
+
+  .summary ol{
+    margin:0;
+    padding-left:20px;
+  }
+
+  .summary li{ margin-bottom:3px; }
+
+  footer{
+    text-align:center;
+    font-size:0.75rem;
+    color:#888;
+    padding:30px 20px 40px;
+  }
+
+  @media (max-width:480px){
+    .slot, .card{ width:92px; height:128px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="mark">nnherit</span>
+    <div>
+      <h1>Family Dynamics — Character Pyramid</h1>
+      <div class="subtitle">Family Dynamics deck · facilitation exercise</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="intro">
+    Every family enterprise runs on a mix of behavioural patterns, not one type per person. This exercise asks you to rank the six cards that speak to you most — <strong>not</strong> to box yourself into a single label.
+    <div class="steps" id="stepsText">
+      Drag a card into the pyramid, or tap a card then tap a slot. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the small <strong>i</strong> on any card to flip it.
+    </div>
+  </div>
+
+  <div class="selection-banner" id="selectionBanner">
+    <span class="swatch" id="selectionSwatch"></span>
+    <span id="selectionText"></span>
+  </div>
+
+  <div class="pyramid-wrap">
+    <h2 class="section-label">
+      <span>Your pyramid</span>
+      <span class="progress-count" id="progressCount">0 of 6 placed</span>
+    </h2>
+    <div class="pyramid" id="pyramid">
+      <div class="pyramid-row">
+        <div class="slot" data-slot="0"><span class="rank-label">Top choice</span>place your #1</div>
+      </div>
+      <div class="pyramid-row">
+        <div class="slot" data-slot="1"><span class="rank-label">2nd</span>place</div>
+        <div class="slot" data-slot="2"><span class="rank-label">3rd</span>place</div>
+      </div>
+      <div class="pyramid-row">
+        <div class="slot" data-slot="3"><span class="rank-label">4th</span>place</div>
+        <div class="slot" data-slot="4"><span class="rank-label">5th</span>place</div>
+        <div class="slot" data-slot="5"><span class="rank-label">6th</span>place</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-label">The ten cards</h2>
+  <div class="tray" id="tray"></div>
+
+  <div class="controls">
+    <button class="reset" id="resetBtn">Reset pyramid</button>
+  </div>
+
+  <div class="summary" id="summary">
+    <h3>Your mix, ranked</h3>
+    <ol id="summaryList"></ol>
+    <button class="copy-result" id="copyBtn" type="button">Copy my pyramid</button>
+    <div id="copyConfirm" style="font-size:0.78rem; color:#666; margin-top:6px; display:none;">Copied — paste it into an email or chat to share with your team.</div>
+  </div>
+
+</main>
+
+<footer>
+  nnherit Dynamics™ — Family Dynamics deck. Internal facilitation prototype.
+</footer>
+
+<script>
+(function(){
+
+  const CARDS = [
+    { id:1, colour:'#1B4D3E', light:false, phrase:'The Right Way', archetype:'The Standard Setter',
+      drive:'To maintain order and correctness', contribution:'Structure, clarity, discipline',
+      tension:'Rigidity, moral pressure, inflexibility', growth:'Balance standards with flexibility',
+      frontImg:'cards/standard-setter-front.webp', backImg:'cards/standard-setter-back.webp' },
+    { id:2, colour:'#E8720C', light:false, phrase:'Here to Help', archetype:'The Supporter',
+      drive:'To help and be valued by others', contribution:'Care, generosity, relationship building',
+      tension:'Over-involvement, hidden expectations', growth:'Support without losing boundaries',
+      frontImg:'cards/supporter-front.webp', backImg:'cards/supporter-back.webp' },
+    { id:3, colour:'#4FC3E0', light:false, phrase:'I Will Be the Best', archetype:'The Driver',
+      drive:'To achieve and prove capability', contribution:'Momentum, ambition, visible progress',
+      tension:'Pressure, comparison, performance focus', growth:'Align success with collective goals',
+      frontImg:'cards/driver-front.webp', backImg:'cards/driver-back.webp' },
+    { id:4, colour:'#F0C808', light:true, phrase:'I Am Me', archetype:'The Catalyst',
+      drive:'To express identity and meaning', contribution:'Creativity, authenticity, emotional depth',
+      tension:'Sensitivity, feeling misunderstood', growth:'Channel emotion into contribution',
+      frontImg:'cards/catalyst-front.webp', backImg:'cards/catalyst-back.webp' },
+    { id:5, colour:'#1F3A93', light:false, phrase:'I Know Everything', archetype:'The Strategist',
+      drive:'To understand systems and gain insight', contribution:'Analysis, curiosity, intellectual clarity',
+      tension:'Detachment, withholding participation', growth:'Share knowledge earlier',
+      frontImg:'cards/strategist-front.webp', backImg:'cards/strategist-back.webp' },
+    { id:6, colour:'#7B3F99', light:false, phrase:'Trust Me', archetype:'The Stabiliser',
+      drive:'To maintain trust and reliability', contribution:'Loyalty, dependability, emotional safety',
+      tension:'Over-responsibility, difficulty saying no', growth:'Trust shared responsibility',
+      frontImg:'cards/stabiliser-front.webp', backImg:'cards/stabiliser-back.webp' },
+    { id:7, colour:'#E85D9E', light:false, phrase:'Life Is for the Taking', archetype:'The Initiator',
+      drive:'To experience possibility and freedom', contribution:'Energy, exploration, new opportunities',
+      tension:'Impulsiveness, unfinished initiatives', growth:'Commit and follow through',
+      frontImg:'cards/initiator-front.webp', backImg:'cards/initiator-back.webp' },
+    { id:8, colour:'#D7263D', light:false, phrase:'My Way or the Highway', archetype:'The Controller',
+      drive:'To protect autonomy and control outcomes', contribution:'Strength, decisiveness, courage',
+      tension:'Domination, conflict escalation', growth:'Use strength with restraint',
+      frontImg:'cards/controller-front.webp', backImg:'cards/controller-back.webp' },
+    { id:9, colour:'#8BC34A', light:true, phrase:'Get Along', archetype:'The Integrator',
+      drive:'To maintain harmony in the system', contribution:'Mediation, perspective, calm',
+      tension:'Avoidance of difficult issues', growth:'Engage with constructive conflict',
+      frontImg:'cards/integrator-front.webp', backImg:'cards/integrator-back.webp' },
+    { id:10, colour:'#FFFFFF', light:true, phrase:'Peace', archetype:'The Steward',
+      drive:'To guide responsibly and ethically', contribution:'Wisdom, long-term thinking, mentorship',
+      tension:'Moral authority, reluctance to adapt', growth:'Stay open to new perspectives',
+      frontImg:'cards/steward-front.webp', backImg:'cards/steward-back.webp' }
+  ];
+
+  const RANK_LABELS = ['Top choice','2nd place','3rd place','4th place','5th place','6th place'];
+
+  const tray = document.getElementById('tray');
+  const pyramid = document.getElementById('pyramid');
+  const slots = Array.from(document.querySelectorAll('.slot'));
+  const resetBtn = document.getElementById('resetBtn');
+  const summary = document.getElementById('summary');
+  const summaryList = document.getElementById('summaryList');
+  const stepsText = document.getElementById('stepsText');
+  const progressCount = document.getElementById('progressCount');
+  const selectionBanner = document.getElementById('selectionBanner');
+  const selectionSwatch = document.getElementById('selectionSwatch');
+  const selectionText = document.getElementById('selectionText');
+  const copyBtn = document.getElementById('copyBtn');
+  const copyConfirm = document.getElementById('copyConfirm');
+
+  // slotState[i] = card id or null
+  const slotState = [null,null,null,null,null,null];
+  let selectedCardId = null; // for tap-to-place
+  let dragCardId = null;
+
+  // Adaptive instructions: touch devices get the tap-first phrasing
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (isTouchDevice){
+    stepsText.innerHTML = 'Tap a card, then tap a spot in the pyramid to place it. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the small <strong>i</strong> on any card to flip it.';
+  }
+
+  function buildCard(cardData){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = cardData.id;
+    card.setAttribute('draggable','true');
+
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="face front" style="--card-colour:${cardData.colour}">
+          <button class="flip-btn" type="button" aria-label="Flip card">i</button>
+          <img src="${cardData.frontImg}" alt="${cardData.archetype} — &quot;${cardData.phrase}&quot;" draggable="false">
+        </div>
+        <div class="face back" style="--card-colour:${cardData.colour}">
+          <button class="flip-btn" type="button" aria-label="Flip card">i</button>
+          <img src="${cardData.backImg}" alt="${cardData.archetype} — card back detail" draggable="false">
+        </div>
+      </div>
+    `;
+
+    // Flip behaviour
+    card.querySelectorAll('.flip-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        card.classList.toggle('flipped');
+      });
+    });
+
+    // Tap-to-select / place
+    card.addEventListener('click', (e)=>{
+      if (e.target.classList.contains('flip-btn')) return;
+      e.stopPropagation();
+      if (didDrag){ didDrag = false; return; }
+      handleCardTap(cardData.id);
+    });
+
+    // Native drag (desktop)
+    card.addEventListener('dragstart', (e)=>{
+      dragCardId = cardData.id;
+      card.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', String(cardData.id));
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', ()=>{
+      card.classList.remove('dragging');
+      dragCardId = null;
+    });
+
+    return card;
+  }
+
+  let didDrag = false;
+
+  function cardLocation(cardId){
+    const idx = slotState.indexOf(cardId);
+    return idx === -1 ? null : idx;
+  }
+
+  function handleCardTap(cardId){
+    const currentSlot = cardLocation(cardId);
+
+    if (selectedCardId === cardId){
+      // deselect
+      selectedCardId = null;
+      renderSelection();
+      return;
+    }
+
+    if (selectedCardId === null){
+      selectedCardId = cardId;
+      renderSelection();
+      return;
+    }
+
+    // A card was already selected: tapping another card swaps their positions
+    const otherId = selectedCardId;
+    const otherSlot = cardLocation(otherId);
+    const thisSlot = currentSlot;
+
+    if (thisSlot !== null && otherSlot !== null){
+      slotState[thisSlot] = otherId;
+      slotState[otherSlot] = cardId;
+    } else if (thisSlot !== null && otherSlot === null){
+      slotState[thisSlot] = otherId;
+    } else if (thisSlot === null && otherSlot !== null){
+      slotState[otherSlot] = cardId;
+    }
+    selectedCardId = null;
+    renderAll();
+  }
+
+  function handleSlotTap(slotIndex){
+    if (selectedCardId !== null){
+      placeCardInSlot(selectedCardId, slotIndex);
+      selectedCardId = null;
+      renderAll();
+      return;
+    }
+    // no selection: tapping a filled slot sends that card back to tray
+    if (slotState[slotIndex] !== null){
+      slotState[slotIndex] = null;
+      renderAll();
+    }
+  }
+
+  function placeCardInSlot(cardId, slotIndex){
+    // remove card from any existing slot
+    const existing = cardLocation(cardId);
+    if (existing !== null) slotState[existing] = null;
+    // whatever was in target slot goes back to tray
+    slotState[slotIndex] = cardId;
+  }
+
+  function renderSelection(){
+    document.querySelectorAll('.card').forEach(el=>{
+      el.classList.toggle('selected', Number(el.dataset.id) === selectedCardId);
+    });
+    slots.forEach((slotEl, i)=>{
+      slotEl.classList.toggle('tap-target', selectedCardId !== null && slotState[i] === null);
+    });
+
+    if (selectedCardId !== null){
+      const cd = CARDS.find(c=>c.id===selectedCardId);
+      selectionSwatch.style.background = cd.colour;
+      selectionText.innerHTML = `<strong>${cd.phrase}</strong> selected — tap an empty spot in the pyramid to place it`;
+      selectionBanner.classList.add('show');
+    } else {
+      selectionBanner.classList.remove('show');
+    }
+  }
+
+  function renderAll(){
+    // Tray: show cards not currently in a slot
+    tray.innerHTML = '';
+    CARDS.forEach(cd=>{
+      if (cardLocation(cd.id) === null){
+        tray.appendChild(buildCard(cd));
+      }
+    });
+
+    // Slots
+    slots.forEach((slotEl, i)=>{
+      const cardId = slotState[i];
+      const rankLabel = `<span class="rank-label">${RANK_LABELS[i]}</span>`;
+      if (cardId === null){
+        slotEl.classList.remove('filled');
+        slotEl.innerHTML = `${rankLabel}place here`;
+      } else {
+        const cd = CARDS.find(c=>c.id===cardId);
+        slotEl.classList.add('filled');
+        slotEl.innerHTML = rankLabel;
+        slotEl.appendChild(buildCard(cd));
+      }
+    });
+
+    renderSelection();
+    updateSummary();
+  }
+
+  function updateSummary(){
+    const filled = slotState.filter(x=>x!==null).length;
+
+    progressCount.textContent = `${filled} of 6 placed`;
+    progressCount.classList.toggle('complete', filled === 6);
+
+    if (filled === 6){
+      summaryList.innerHTML = slotState.map((id,i)=>{
+        const cd = CARDS.find(c=>c.id===id);
+        return `<li>${RANK_LABELS[i]}: ${cd.archetype} — "${cd.phrase}"</li>`;
+      }).join('');
+      summary.classList.add('show');
+    } else {
+      summary.classList.remove('show');
+    }
+  }
+
+  copyBtn.addEventListener('click', ()=>{
+    const lines = slotState.map((id,i)=>{
+      const cd = CARDS.find(c=>c.id===id);
+      return `${RANK_LABELS[i]}: ${cd.archetype} ("${cd.phrase}")`;
+    });
+    const text = `My Family Dynamics pyramid:\n${lines.join('\n')}`;
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(()=>{
+        copyConfirm.style.display = 'block';
+        setTimeout(()=>{ copyConfirm.style.display = 'none'; }, 4000);
+      });
+    }
+  });
+
+  // Native drag-and-drop targets: slots + tray
+  function wireDropTarget(el, onDrop){
+    el.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      el.classList.add('drop-hover');
+    });
+    el.addEventListener('dragleave', ()=>{
+      el.classList.remove('drop-hover');
+    });
+    el.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      el.classList.remove('drop-hover');
+      const id = Number(e.dataTransfer.getData('text/plain'));
+      if (!id) return;
+      onDrop(id);
+    });
+  }
+
+  slots.forEach((slotEl, i)=>{
+    wireDropTarget(slotEl, (id)=>{
+      placeCardInSlot(id, i);
+      selectedCardId = null;
+      renderAll();
+    });
+    slotEl.addEventListener('click', ()=>{
+      handleSlotTap(i);
+    });
+  });
+
+  wireDropTarget(tray, (id)=>{
+    const existing = cardLocation(id);
+    if (existing !== null) slotState[existing] = null;
+    selectedCardId = null;
+    renderAll();
+  });
+
+  // distinguish a true drag from a click, so dragend doesn't also fire a tap
+  document.addEventListener('dragstart', ()=>{ didDrag = true; });
+  document.addEventListener('dragend', ()=>{ setTimeout(()=>{ didDrag = false; }, 50); });
+
+  resetBtn.addEventListener('click', ()=>{
+    for (let i=0;i<6;i++) slotState[i] = null;
+    selectedCardId = null;
+    document.querySelectorAll('.card.flipped').forEach(c=>c.classList.remove('flipped'));
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
