@@ -165,8 +165,8 @@
   }
 
   .slot{
-    width:118px;
-    height:160px;
+    width:220px;
+    height:158px;
     border:2px dashed #b9b9b3;
     border-radius:10px;
     background:rgba(255,255,255,0.5);
@@ -213,8 +213,8 @@
   /* --- Cards --- */
 
   .card{
-    width:118px;
-    height:160px;
+    width:220px;
+    height:158px;
     border-radius:10px;
     perspective:800px;
     cursor:grab;
@@ -268,24 +268,26 @@
 
   .flip-btn{
     position:absolute;
-    top:5px;
-    right:5px;
-    width:20px;
-    height:20px;
+    top:6px;
+    right:6px;
+    width:28px;
+    height:28px;
     border-radius:50%;
-    background:rgba(255,255,255,0.85);
+    background:rgba(255,255,255,0.9);
     color:#111;
     border:none;
-    font-size:0.7rem;
-    font-weight:700;
-    line-height:20px;
-    text-align:center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     cursor:pointer;
     z-index:5;
+    box-shadow:0 1px 3px rgba(0,0,0,0.35);
   }
 
-  .face.front .flip-btn{ background:rgba(255,255,255,0.85); }
-  .face.back .flip-btn{ background:rgba(0,0,0,0.08); }
+  .flip-btn:hover{ background:#fff; }
+
+  .face.front .flip-btn{ background:rgba(255,255,255,0.9); }
+  .face.back .flip-btn{ background:rgba(255,255,255,0.9); }
 
   /* --- Tray --- */
 
@@ -372,7 +374,7 @@
   }
 
   @media (max-width:480px){
-    .slot, .card{ width:92px; height:128px; }
+    .slot, .card{ width:172px; height:124px; }
   }
 </style>
 </head>
@@ -393,7 +395,7 @@
   <div class="intro">
     Every family enterprise runs on a mix of behavioural patterns, not one type per person. This exercise asks you to rank the six cards that speak to you most — <strong>not</strong> to box yourself into a single label.
     <div class="steps" id="stepsText">
-      Drag a card into the pyramid, or tap a card then tap a slot. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the small <strong>i</strong> on any card to flip it.
+      Drag a card into the pyramid, or tap a card then tap a slot. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> in the corner of any card to see its back.
     </div>
   </div>
 
@@ -491,6 +493,8 @@
 
   const RANK_LABELS = ['Top choice','2nd place','3rd place','4th place','5th place','6th place'];
 
+  const FLIP_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>';
+
   const tray = document.getElementById('tray');
   const pyramid = document.getElementById('pyramid');
   const slots = Array.from(document.querySelectorAll('.slot'));
@@ -513,7 +517,7 @@
   // Adaptive instructions: touch devices get the tap-first phrasing
   const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   if (isTouchDevice){
-    stepsText.innerHTML = 'Tap a card, then tap a spot in the pyramid to place it. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the small <strong>i</strong> on any card to flip it.';
+    stepsText.innerHTML = 'Tap a card, then tap a spot in the pyramid to place it. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> in the corner of any card to see its back.';
   }
 
   function buildCard(cardData){
@@ -525,11 +529,11 @@
     card.innerHTML = `
       <div class="card-inner">
         <div class="face front" style="--card-colour:${cardData.colour}">
-          <button class="flip-btn" type="button" aria-label="Flip card">i</button>
+          <button class="flip-btn" type="button" aria-label="Flip card to see the back" title="Flip to see the back">${FLIP_ICON}</button>
           <img src="${cardData.frontImg}" alt="${cardData.archetype} — &quot;${cardData.phrase}&quot;" draggable="false">
         </div>
         <div class="face back" style="--card-colour:${cardData.colour}">
-          <button class="flip-btn" type="button" aria-label="Flip card">i</button>
+          <button class="flip-btn" type="button" aria-label="Flip card to see the front" title="Flip to see the front">${FLIP_ICON}</button>
           <img src="${cardData.backImg}" alt="${cardData.archetype} — card back detail" draggable="false">
         </div>
       </div>
