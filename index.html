@@ -182,7 +182,7 @@
   }
 
   .slot.filled{
-    border-style:solid;
+    border:none;
     background:transparent;
     padding:0;
   }
@@ -220,13 +220,12 @@
     cursor:grab;
     user-select:none;
     -webkit-user-select:none;
-    touch-action:none;
+    touch-action:manipulation;
     position:relative;
   }
 
   .card.dragging{ opacity:0.35; }
   .card.selected .card-inner{ box-shadow:0 0 0 3px var(--nn-black); }
-  .card.placeholder{ visibility:hidden; }
 
   .card-inner{
     width:100%;
@@ -288,6 +287,26 @@
 
   .face.front .flip-btn{ background:rgba(255,255,255,0.9); }
   .face.back .flip-btn{ background:rgba(255,255,255,0.9); }
+
+  .remove-btn{
+    position:absolute;
+    top:6px;
+    right:40px;
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.9);
+    color:#111;
+    border:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:5;
+    box-shadow:0 1px 3px rgba(0,0,0,0.35);
+  }
+
+  .remove-btn:hover{ background:#fff; color:#b00020; }
 
   /* --- Tray --- */
 
@@ -395,7 +414,7 @@
   <div class="intro">
     Every family enterprise runs on a mix of behavioural patterns, not one type per person. This exercise asks you to rank the six cards that speak to you most — <strong>not</strong> to box yourself into a single label.
     <div class="steps" id="stepsText">
-      Drag a card into the pyramid, or tap a card then tap a slot. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> in the corner of any card to see its back.
+      Drag a card into the pyramid, or tap a card then tap a slot. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> on any card to see its back, or the <strong>× icon</strong> on a placed card to send it back to the list.
     </div>
   </div>
 
@@ -494,6 +513,11 @@
   const RANK_LABELS = ['Top choice','2nd place','3rd place','4th place','5th place','6th place'];
 
   const FLIP_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>';
+  const REMOVE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+  // Card ids currently showing their back face. Tracked separately from the
+  // DOM because renderAll() rebuilds every card element from scratch.
+  const flippedIds = new Set();
 
   const tray = document.getElementById('tray');
   const pyramid = document.getElementById('pyramid');
@@ -517,22 +541,30 @@
   // Adaptive instructions: touch devices get the tap-first phrasing
   const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   if (isTouchDevice){
-    stepsText.innerHTML = 'Tap a card, then tap a spot in the pyramid to place it. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> in the corner of any card to see its back.';
+    stepsText.innerHTML = 'Tap a card, then tap a spot in the pyramid to place it. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> on any card to see its back, or the <strong>× icon</strong> on a placed card to send it back to the list.';
   }
 
-  function buildCard(cardData){
+  function buildCard(cardData, slotIndex){
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = cardData.id;
     card.setAttribute('draggable','true');
+    if (flippedIds.has(cardData.id)) card.classList.add('flipped');
+
+    const placed = (slotIndex !== null && slotIndex !== undefined);
+    const removeBtnHTML = placed
+      ? `<button class="remove-btn" type="button" aria-label="Remove from pyramid" title="Remove from pyramid">${REMOVE_ICON}</button>`
+      : '';
 
     card.innerHTML = `
       <div class="card-inner">
         <div class="face front" style="--card-colour:${cardData.colour}">
+          ${removeBtnHTML}
           <button class="flip-btn" type="button" aria-label="Flip card to see the back" title="Flip to see the back">${FLIP_ICON}</button>
           <img src="${cardData.frontImg}" alt="${cardData.archetype} — &quot;${cardData.phrase}&quot;" draggable="false">
         </div>
         <div class="face back" style="--card-colour:${cardData.colour}">
+          ${removeBtnHTML}
           <button class="flip-btn" type="button" aria-label="Flip card to see the front" title="Flip to see the front">${FLIP_ICON}</button>
           <img src="${cardData.backImg}" alt="${cardData.archetype} — card back detail" draggable="false">
         </div>
@@ -543,13 +575,27 @@
     card.querySelectorAll('.flip-btn').forEach(btn=>{
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
+        if (flippedIds.has(cardData.id)) flippedIds.delete(cardData.id);
+        else flippedIds.add(cardData.id);
         card.classList.toggle('flipped');
       });
     });
 
+    // Remove-from-pyramid behaviour (placed cards only)
+    if (placed){
+      card.querySelectorAll('.remove-btn').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          slotState[slotIndex] = null;
+          if (selectedCardId === cardData.id) selectedCardId = null;
+          renderAll();
+        });
+      });
+    }
+
     // Tap-to-select / place
     card.addEventListener('click', (e)=>{
-      if (e.target.classList.contains('flip-btn')) return;
+      if (e.target.closest('.flip-btn, .remove-btn')) return;
       e.stopPropagation();
       if (didDrag){ didDrag = false; return; }
       handleCardTap(cardData.id);
@@ -611,15 +657,12 @@
   }
 
   function handleSlotTap(slotIndex){
+    // Only reachable for empty slots — a filled slot's card intercepts the
+    // click first (see buildCard's click handler, which stops propagation).
+    // Removing a placed card is done via its remove-btn instead.
     if (selectedCardId !== null){
       placeCardInSlot(selectedCardId, slotIndex);
       selectedCardId = null;
-      renderAll();
-      return;
-    }
-    // no selection: tapping a filled slot sends that card back to tray
-    if (slotState[slotIndex] !== null){
-      slotState[slotIndex] = null;
       renderAll();
     }
   }
@@ -670,7 +713,7 @@
         const cd = CARDS.find(c=>c.id===cardId);
         slotEl.classList.add('filled');
         slotEl.innerHTML = rankLabel;
-        slotEl.appendChild(buildCard(cd));
+        slotEl.appendChild(buildCard(cd, i));
       }
     });
 
@@ -695,17 +738,25 @@
     }
   }
 
+  function showCopyMessage(msg){
+    copyConfirm.textContent = msg;
+    copyConfirm.style.display = 'block';
+    setTimeout(()=>{ copyConfirm.style.display = 'none'; }, 4000);
+  }
+
   copyBtn.addEventListener('click', ()=>{
     const lines = slotState.map((id,i)=>{
       const cd = CARDS.find(c=>c.id===id);
       return `${RANK_LABELS[i]}: ${cd.archetype} ("${cd.phrase}")`;
     });
     const text = `My Family Dynamics pyramid:\n${lines.join('\n')}`;
+
     if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(()=>{
-        copyConfirm.style.display = 'block';
-        setTimeout(()=>{ copyConfirm.style.display = 'none'; }, 4000);
-      });
+      navigator.clipboard.writeText(text)
+        .then(()=>showCopyMessage('Copied — paste it into an email or chat to share with your team.'))
+        .catch(()=>showCopyMessage("Couldn't copy automatically — please select and copy the text manually."));
+    } else {
+      showCopyMessage("Clipboard access isn't available in this browser — please select and copy the text manually.");
     }
   });
 
@@ -752,7 +803,7 @@
   resetBtn.addEventListener('click', ()=>{
     for (let i=0;i<6;i++) slotState[i] = null;
     selectedCardId = null;
-    document.querySelectorAll('.card.flipped').forEach(c=>c.classList.remove('flipped'));
+    flippedIds.clear();
     renderAll();
   });
 
