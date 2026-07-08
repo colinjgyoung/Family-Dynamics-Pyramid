@@ -251,6 +251,14 @@
   .card.dragging{ opacity:0.35; }
   .card.selected .card-inner{ box-shadow:0 0 0 3px var(--nn-black); }
 
+  .card:focus-visible,
+  .slot:focus-visible,
+  .flip-btn:focus-visible,
+  .remove-btn:focus-visible{
+    outline:3px solid var(--nn-black);
+    outline-offset:2px;
+  }
+
   .card-inner{
     width:100%;
     height:100%;
@@ -440,11 +448,11 @@
   <div class="intro">
     Every family enterprise runs on a mix of behavioural patterns, not one type per person. This exercise asks you to rank the six cards that speak to you most — <strong>not</strong> to box yourself into a single label.
     <div class="steps" id="stepsText">
-      Drag a card into the pyramid, or tap a card then tap a slot. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> on any card to see its back, or the <strong>× icon</strong> on a placed card to send it back to the list.
+      Drag a card into the pyramid, or tap a card then tap a slot. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> on any card to see its back, or the <strong>× icon</strong> on a placed card to send it back to the list. Keyboard works too: Tab to a card, Enter to pick it up, then Tab to a spot and Enter to place (Esc cancels).
     </div>
   </div>
 
-  <div class="selection-banner" id="selectionBanner">
+  <div class="selection-banner" id="selectionBanner" aria-live="polite">
     <span class="swatch" id="selectionSwatch"></span>
     <span id="selectionText"></span>
   </div>
@@ -452,7 +460,7 @@
   <div class="pyramid-wrap">
     <h2 class="section-label">
       <span>Your pyramid</span>
-      <span class="progress-count" id="progressCount">0 of 6 placed</span>
+      <span class="progress-count" id="progressCount" aria-live="polite">0 of 6 placed</span>
     </h2>
     <div class="pyramid" id="pyramid">
       <div class="pyramid-row">
@@ -481,7 +489,7 @@
     <h3>Your mix, ranked</h3>
     <ol id="summaryList"></ol>
     <button class="copy-result" id="copyBtn" type="button">Copy my pyramid</button>
-    <div id="copyConfirm" style="font-size:0.78rem; color:#666; margin-top:6px; display:none;">Copied — paste it into an email or chat to share with your team.</div>
+    <div id="copyConfirm" aria-live="polite" style="font-size:0.78rem; color:#666; margin-top:6px; display:none;">Copied — paste it into an email or chat to share with your team.</div>
   </div>
 
 </main>
@@ -576,6 +584,11 @@
     card.className = 'card';
     card.dataset.id = cardData.id;
     card.setAttribute('draggable','true');
+    card.setAttribute('tabindex','0');
+    card.setAttribute('role','button');
+    const placedLabel = (slotIndex !== null && slotIndex !== undefined) ? `, placed as ${RANK_LABELS[slotIndex]}` : ', in the tray';
+    card.setAttribute('aria-label', `${cardData.archetype} — "${cardData.phrase}"${placedLabel}`);
+    card.setAttribute('aria-pressed', selectedCardId === cardData.id ? 'true' : 'false');
     if (flippedIds.has(cardData.id)) card.classList.add('flipped');
 
     const placed = (slotIndex !== null && slotIndex !== undefined);
@@ -626,6 +639,16 @@
       e.stopPropagation();
       if (didDrag){ didDrag = false; return; }
       handleCardTap(cardData.id);
+    });
+
+    // Keyboard: Enter/Space acts like a tap. Only when the card itself is
+    // focused — inner flip/remove buttons handle their own keys natively.
+    card.addEventListener('keydown', (e)=>{
+      if (e.target !== card) return;
+      if (e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        handleCardTap(cardData.id);
+      }
     });
 
     // Native drag (desktop)
@@ -704,7 +727,9 @@
 
   function renderSelection(){
     document.querySelectorAll('.card').forEach(el=>{
-      el.classList.toggle('selected', Number(el.dataset.id) === selectedCardId);
+      const isSelected = Number(el.dataset.id) === selectedCardId;
+      el.classList.toggle('selected', isSelected);
+      el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     });
     slots.forEach((slotEl, i)=>{
       slotEl.classList.toggle('tap-target', selectedCardId !== null && slotState[i] === null);
@@ -721,6 +746,16 @@
   }
 
   function renderAll(){
+    // Rebuilding wipes the DOM, so remember what had keyboard focus and
+    // restore it afterwards — otherwise every placement dumps focus to <body>.
+    const active = document.activeElement;
+    let refocus = null;
+    if (active && active.closest){
+      const focusedCard = active.closest('.card');
+      if (focusedCard) refocus = {type:'card', id:Number(focusedCard.dataset.id)};
+      else if (active.classList.contains('slot')) refocus = {type:'slot', idx:slots.indexOf(active)};
+    }
+
     // Tray: show cards not currently in a slot
     tray.innerHTML = '';
     CARDS.forEach(cd=>{
@@ -736,16 +771,33 @@
       if (cardId === null){
         slotEl.classList.remove('filled');
         slotEl.innerHTML = `${rankLabel}place here`;
+        slotEl.setAttribute('tabindex','0');
+        slotEl.setAttribute('role','button');
+        slotEl.setAttribute('aria-label', `${RANK_LABELS[i]} — empty, place a card here`);
       } else {
         const cd = CARDS.find(c=>c.id===cardId);
         slotEl.classList.add('filled');
         slotEl.innerHTML = rankLabel;
         slotEl.appendChild(buildCard(cd, i));
+        // The card inside is the focus target; the slot itself steps aside.
+        slotEl.removeAttribute('tabindex');
+        slotEl.removeAttribute('role');
+        slotEl.removeAttribute('aria-label');
       }
     });
 
     renderSelection();
     updateSummary();
+
+    if (refocus){
+      if (refocus.type === 'card'){
+        const el = document.querySelector(`.card[data-id="${refocus.id}"]`);
+        if (el) el.focus();
+      } else if (refocus.idx >= 0){
+        const slotEl = slots[refocus.idx];
+        (slotEl.hasAttribute('tabindex') ? slotEl : slotEl.querySelector('.card') || slotEl).focus();
+      }
+    }
   }
 
   function updateSummary(){
@@ -821,6 +873,21 @@
     slotEl.addEventListener('click', ()=>{
       handleSlotTap(i);
     });
+    slotEl.addEventListener('keydown', (e)=>{
+      if (e.target !== slotEl) return;
+      if (e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        handleSlotTap(i);
+      }
+    });
+  });
+
+  // Escape anywhere clears the current selection
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape' && selectedCardId !== null){
+      selectedCardId = null;
+      renderSelection();
+    }
   });
 
   wireDropTarget(tray, (id)=>{
