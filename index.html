@@ -13,6 +13,24 @@
     --nn-white:#ffffff;
     --nn-grey:#f4f4f2;
     --nn-line:#dcdcd8;
+    /* Card size scales so the 3-slot bottom row always fits on one line:
+       100vw minus main padding (40px) and two 14px row gaps, split 3 ways. */
+    --card-w:min(220px, calc((100vw - 92px) / 3));
+    --card-h:calc(var(--card-w) * 0.718);
+    /* Tray cards aren't constrained to 3-across, so on narrow screens they
+       stay larger (2-across) for readability. */
+    --tray-card-w:var(--card-w);
+  }
+
+  @media (max-width:600px){
+    :root{
+      --tray-card-w:min(220px, calc((100vw - 118px) / 2));
+    }
+    .slot .flip-btn, .slot .remove-btn{
+      width:22px;
+      height:22px;
+    }
+    .slot .remove-btn{ right:32px; }
   }
 
   *{ box-sizing:border-box; }
@@ -119,6 +137,11 @@
 
   .selection-banner{
     display:none;
+    position:fixed;
+    bottom:18px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:100;
     align-items:center;
     justify-content:center;
     gap:8px;
@@ -127,9 +150,9 @@
     font-size:0.85rem;
     padding:10px 16px;
     border-radius:20px;
-    max-width:520px;
-    margin:0 auto 16px;
+    max-width:calc(100vw - 32px);
     text-align:center;
+    box-shadow:0 4px 14px rgba(0,0,0,0.35);
   }
 
   .selection-banner.show{ display:flex; }
@@ -165,8 +188,8 @@
   }
 
   .slot{
-    width:220px;
-    height:158px;
+    width:var(--card-w);
+    height:var(--card-h);
     border:2px dashed #b9b9b3;
     border-radius:10px;
     background:rgba(255,255,255,0.5);
@@ -194,6 +217,7 @@
 
   .slot.tap-target{
     border-color:var(--nn-yellow);
+    cursor:pointer;
   }
 
   .slot .rank-label{
@@ -213,8 +237,8 @@
   /* --- Cards --- */
 
   .card{
-    width:220px;
-    height:158px;
+    width:var(--card-w);
+    height:var(--card-h);
     border-radius:10px;
     perspective:800px;
     cursor:grab;
@@ -321,6 +345,11 @@
     justify-content:center;
   }
 
+  .tray .card{
+    width:var(--tray-card-w);
+    height:calc(var(--tray-card-w) * 0.718);
+  }
+
   /* --- Controls & summary --- */
 
   .controls{
@@ -392,9 +421,6 @@
     padding:30px 20px 40px;
   }
 
-  @media (max-width:480px){
-    .slot, .card{ width:172px; height:124px; }
-  }
 </style>
 </head>
 <body>
@@ -444,7 +470,7 @@
     </div>
   </div>
 
-  <h2 class="section-label">The ten cards</h2>
+  <h2 class="section-label"><span id="trayLabel">The ten cards</span></h2>
   <div class="tray" id="tray"></div>
 
   <div class="controls">
@@ -532,6 +558,7 @@
   const selectionText = document.getElementById('selectionText');
   const copyBtn = document.getElementById('copyBtn');
   const copyConfirm = document.getElementById('copyConfirm');
+  const trayLabel = document.getElementById('trayLabel');
 
   // slotState[i] = card id or null
   const slotState = [null,null,null,null,null,null];
@@ -686,7 +713,7 @@
     if (selectedCardId !== null){
       const cd = CARDS.find(c=>c.id===selectedCardId);
       selectionSwatch.style.background = cd.colour;
-      selectionText.innerHTML = `<strong>${cd.phrase}</strong> selected — tap an empty spot in the pyramid to place it`;
+      selectionText.innerHTML = `<strong>${cd.phrase}</strong> selected — tap any spot in the pyramid to place it`;
       selectionBanner.classList.add('show');
     } else {
       selectionBanner.classList.remove('show');
@@ -727,12 +754,19 @@
     progressCount.textContent = `${filled} of 6 placed`;
     progressCount.classList.toggle('complete', filled === 6);
 
+    const remaining = CARDS.length - filled;
+    trayLabel.textContent = filled === 0 ? 'The ten cards' : `The ten cards — ${remaining} left in the tray`;
+
     if (filled === 6){
+      const firstReveal = !summary.classList.contains('show');
       summaryList.innerHTML = slotState.map((id,i)=>{
         const cd = CARDS.find(c=>c.id===id);
         return `<li>${RANK_LABELS[i]}: ${cd.archetype} — "${cd.phrase}"</li>`;
       }).join('');
       summary.classList.add('show');
+      if (firstReveal){
+        summary.scrollIntoView({behavior:'smooth', block:'nearest'});
+      }
     } else {
       summary.classList.remove('show');
     }
