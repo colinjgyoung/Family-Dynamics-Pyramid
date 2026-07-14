@@ -17,15 +17,9 @@
        100vw minus main padding (40px) and two 14px row gaps, split 3 ways. */
     --card-w:min(220px, calc((100vw - 92px) / 3));
     --card-h:calc(var(--card-w) * 0.718);
-    /* Tray cards aren't constrained to 3-across, so on narrow screens they
-       stay larger (2-across) for readability. */
-    --tray-card-w:var(--card-w);
   }
 
   @media (max-width:600px){
-    :root{
-      --tray-card-w:min(220px, calc((100vw - 118px) / 2));
-    }
     .slot .flip-btn, .slot .remove-btn{
       width:22px;
       height:22px;
@@ -347,15 +341,54 @@
     border:1px solid var(--nn-line);
     border-radius:8px;
     padding:18px;
-    display:flex;
-    gap:14px;
-    flex-wrap:wrap;
-    justify-content:center;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+    gap:22px 18px;
   }
 
+  .tray-item{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  /* Tray cards fill their grid column at full readable size */
   .tray .card{
-    width:var(--tray-card-w);
-    height:calc(var(--tray-card-w) * 0.718);
+    width:100%;
+    height:auto;
+    aspect-ratio:560 / 403;
+  }
+
+  .card-actions{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+
+  .card-actions .card-name{
+    font-weight:700;
+    font-size:0.95rem;
+  }
+
+  button.choose{
+    background:var(--nn-black);
+    color:var(--nn-white);
+    border:none;
+    padding:9px 22px;
+    border-radius:20px;
+    font-size:0.85rem;
+    font-weight:600;
+    cursor:pointer;
+    letter-spacing:0.3px;
+    flex:none;
+  }
+
+  button.choose:hover{ background:#000; }
+
+  button.choose.chosen{
+    background:var(--nn-yellow);
+    color:var(--nn-black);
   }
 
   /* --- Controls & summary --- */
@@ -448,7 +481,7 @@
   <div class="intro">
     Every family enterprise runs on a mix of behavioural patterns, not one type per person. This exercise asks you to rank the six cards that speak to you most — <strong>not</strong> to box yourself into a single label.
     <div class="steps" id="stepsText">
-      Drag a card into the pyramid, or tap a card then tap a slot. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> on any card to see its back, or the <strong>× icon</strong> on a placed card to send it back to the list. Keyboard works too: Tab to a card, Enter to pick it up, then Tab to a spot and Enter to place (Esc cancels).
+      <strong>Read</strong> the cards below — click a card to flip it over. When one feels like you, hit <strong>Choose</strong>, then click a spot in the pyramid to place it. Top spot = your strongest match, the two below = next closest, the bottom three = the rest of your mix. The <strong>× icon</strong> on a placed card sends it back to the list. (You can also drag cards straight in, and the keyboard works too: Tab + Enter, Esc cancels.)
     </div>
   </div>
 
@@ -576,7 +609,38 @@
   // Adaptive instructions: touch devices get the tap-first phrasing
   const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   if (isTouchDevice){
-    stepsText.innerHTML = 'Tap a card, then tap a spot in the pyramid to place it. Top spot = your strongest match. The two below = your next closest. The three on the bottom = the rest of your mix. Tap the <strong>flip icon</strong> on any card to see its back, or the <strong>× icon</strong> on a placed card to send it back to the list.';
+    stepsText.innerHTML = '<strong>Read</strong> the cards below — tap a card to flip it over. When one feels like you, tap <strong>Choose</strong>, then tap a spot in the pyramid to place it. Top spot = your strongest match, the two below = next closest, the bottom three = the rest of your mix. The <strong>× icon</strong> on a placed card sends it back to the list.';
+  }
+
+  function toggleFlip(cardId){
+    if (flippedIds.has(cardId)) flippedIds.delete(cardId);
+    else flippedIds.add(cardId);
+    document.querySelectorAll(`.card[data-id="${cardId}"]`).forEach(el=>{
+      el.classList.toggle('flipped', flippedIds.has(cardId));
+    });
+  }
+
+  // Clicking a card reads it (flip); choosing/placing is done with the
+  // explicit Choose button and slot taps, so reading never grabs a card.
+  function onCardActivate(cardData, slotIndex){
+    const placed = (slotIndex !== null && slotIndex !== undefined);
+    if (selectedCardId !== null){
+      if (placed){
+        // a card is chosen and a placed card was tapped: take its spot
+        placeCardInSlot(selectedCardId, slotIndex);
+        selectedCardId = null;
+        renderAll();
+      } else if (selectedCardId === cardData.id){
+        selectedCardId = null;
+        renderSelection();
+      } else {
+        // switch the choice to this tray card
+        selectedCardId = cardData.id;
+        renderSelection();
+      }
+      return;
+    }
+    toggleFlip(cardData.id);
   }
 
   function buildCard(cardData, slotIndex){
@@ -587,8 +651,7 @@
     card.setAttribute('tabindex','0');
     card.setAttribute('role','button');
     const placedLabel = (slotIndex !== null && slotIndex !== undefined) ? `, placed as ${RANK_LABELS[slotIndex]}` : ', in the tray';
-    card.setAttribute('aria-label', `${cardData.archetype} — "${cardData.phrase}"${placedLabel}`);
-    card.setAttribute('aria-pressed', selectedCardId === cardData.id ? 'true' : 'false');
+    card.setAttribute('aria-label', `${cardData.archetype} — "${cardData.phrase}"${placedLabel}. Press Enter to flip the card.`);
     if (flippedIds.has(cardData.id)) card.classList.add('flipped');
 
     const placed = (slotIndex !== null && slotIndex !== undefined);
@@ -615,9 +678,7 @@
     card.querySelectorAll('.flip-btn').forEach(btn=>{
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
-        if (flippedIds.has(cardData.id)) flippedIds.delete(cardData.id);
-        else flippedIds.add(cardData.id);
-        card.classList.toggle('flipped');
+        toggleFlip(cardData.id);
       });
     });
 
@@ -633,12 +694,12 @@
       });
     }
 
-    // Tap-to-select / place
+    // Tap: flip to read (or complete a placement if a card is chosen)
     card.addEventListener('click', (e)=>{
       if (e.target.closest('.flip-btn, .remove-btn')) return;
       e.stopPropagation();
       if (didDrag){ didDrag = false; return; }
-      handleCardTap(cardData.id);
+      onCardActivate(cardData, slotIndex);
     });
 
     // Keyboard: Enter/Space acts like a tap. Only when the card itself is
@@ -647,7 +708,7 @@
       if (e.target !== card) return;
       if (e.key === 'Enter' || e.key === ' '){
         e.preventDefault();
-        handleCardTap(cardData.id);
+        onCardActivate(cardData, slotIndex);
       }
     });
 
@@ -673,37 +734,34 @@
     return idx === -1 ? null : idx;
   }
 
-  function handleCardTap(cardId){
-    const currentSlot = cardLocation(cardId);
+  function buildTrayItem(cardData){
+    const item = document.createElement('div');
+    item.className = 'tray-item';
+    item.dataset.id = cardData.id;
 
-    if (selectedCardId === cardId){
-      // deselect
-      selectedCardId = null;
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    const name = document.createElement('span');
+    name.className = 'card-name';
+    name.textContent = cardData.archetype;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'choose';
+    btn.addEventListener('click', ()=>{
+      selectedCardId = (selectedCardId === cardData.id) ? null : cardData.id;
       renderSelection();
-      return;
-    }
+      if (selectedCardId !== null){
+        pyramid.scrollIntoView({behavior:'smooth', block:'nearest'});
+      }
+    });
 
-    if (selectedCardId === null){
-      selectedCardId = cardId;
-      renderSelection();
-      return;
-    }
-
-    // A card was already selected: tapping another card swaps their positions
-    const otherId = selectedCardId;
-    const otherSlot = cardLocation(otherId);
-    const thisSlot = currentSlot;
-
-    if (thisSlot !== null && otherSlot !== null){
-      slotState[thisSlot] = otherId;
-      slotState[otherSlot] = cardId;
-    } else if (thisSlot !== null && otherSlot === null){
-      slotState[thisSlot] = otherId;
-    } else if (thisSlot === null && otherSlot !== null){
-      slotState[otherSlot] = cardId;
-    }
-    selectedCardId = null;
-    renderAll();
+    actions.appendChild(name);
+    actions.appendChild(btn);
+    item.appendChild(buildCard(cardData));
+    item.appendChild(actions);
+    return item;
   }
 
   function handleSlotTap(slotIndex){
@@ -727,18 +785,25 @@
 
   function renderSelection(){
     document.querySelectorAll('.card').forEach(el=>{
-      const isSelected = Number(el.dataset.id) === selectedCardId;
-      el.classList.toggle('selected', isSelected);
-      el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+      el.classList.toggle('selected', Number(el.dataset.id) === selectedCardId);
     });
     slots.forEach((slotEl, i)=>{
       slotEl.classList.toggle('tap-target', selectedCardId !== null && slotState[i] === null);
     });
 
+    document.querySelectorAll('.tray-item').forEach(item=>{
+      const chosen = Number(item.dataset.id) === selectedCardId;
+      const btn = item.querySelector('button.choose');
+      btn.textContent = chosen ? 'Cancel' : 'Choose';
+      btn.classList.toggle('chosen', chosen);
+      btn.setAttribute('aria-pressed', chosen ? 'true' : 'false');
+      btn.setAttribute('aria-label', `${chosen ? 'Cancel choosing' : 'Choose'} ${item.querySelector('.card-name').textContent}`);
+    });
+
     if (selectedCardId !== null){
       const cd = CARDS.find(c=>c.id===selectedCardId);
       selectionSwatch.style.background = cd.colour;
-      selectionText.innerHTML = `<strong>${cd.phrase}</strong> selected — tap any spot in the pyramid to place it`;
+      selectionText.innerHTML = `<strong>${cd.phrase}</strong> chosen — tap a spot in the pyramid to place it`;
       selectionBanner.classList.add('show');
     } else {
       selectionBanner.classList.remove('show');
@@ -752,7 +817,9 @@
     let refocus = null;
     if (active && active.closest){
       const focusedCard = active.closest('.card');
+      const focusedItem = active.closest('.tray-item');
       if (focusedCard) refocus = {type:'card', id:Number(focusedCard.dataset.id)};
+      else if (focusedItem) refocus = {type:'choose', id:Number(focusedItem.dataset.id)};
       else if (active.classList.contains('slot')) refocus = {type:'slot', idx:slots.indexOf(active)};
     }
 
@@ -760,7 +827,7 @@
     tray.innerHTML = '';
     CARDS.forEach(cd=>{
       if (cardLocation(cd.id) === null){
-        tray.appendChild(buildCard(cd));
+        tray.appendChild(buildTrayItem(cd));
       }
     });
 
@@ -792,6 +859,11 @@
     if (refocus){
       if (refocus.type === 'card'){
         const el = document.querySelector(`.card[data-id="${refocus.id}"]`);
+        if (el) el.focus();
+      } else if (refocus.type === 'choose'){
+        // the tray item may be gone if its card was just placed — follow the card
+        const btn = document.querySelector(`.tray-item[data-id="${refocus.id}"] button.choose`);
+        const el = btn || document.querySelector(`.card[data-id="${refocus.id}"]`);
         if (el) el.focus();
       } else if (refocus.idx >= 0){
         const slotEl = slots[refocus.idx];
