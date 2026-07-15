@@ -396,8 +396,25 @@
   .controls{
     display:flex;
     justify-content:center;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
     margin:22px 0 10px;
   }
+
+  button.finish{
+    background:var(--nn-yellow);
+    color:var(--nn-black);
+    border:2px solid var(--nn-black);
+    padding:10px 22px;
+    border-radius:20px;
+    font-size:0.9rem;
+    font-weight:700;
+    cursor:pointer;
+    letter-spacing:0.3px;
+  }
+
+  button.finish:hover{ background:#ffe33d; }
 
   button.reset{
     background:var(--nn-black);
@@ -481,7 +498,7 @@
   <div class="intro">
     Every family enterprise runs on a mix of behavioural patterns, not one type per person. This exercise asks you to rank the six cards that speak to you most — <strong>not</strong> to box yourself into a single label.
     <div class="steps" id="stepsText">
-      <strong>Read</strong> the cards below — click a card to flip it over. When one feels like you, hit <strong>Choose</strong>, then click a spot in the pyramid to place it. Top spot = your strongest match, the two below = next closest, the bottom three = the rest of your mix. The <strong>× icon</strong> on a placed card sends it back to the list. (You can also drag cards straight in, and the keyboard works too: Tab + Enter, Esc cancels.)
+      <strong>Read</strong> the cards below — click a card to flip it over. When one feels like you, hit <strong>Choose</strong>, then click a spot in the pyramid to place it. Top spot = your strongest match, the two below = next closest, the bottom three = the rest of your mix. The <strong>× icon</strong> on a placed card sends it back to the list. You don't have to fill all six — once you've placed three, a finish button appears below the cards. (You can also drag cards straight in, and the keyboard works too: Tab + Enter, Esc cancels.)
     </div>
   </div>
 
@@ -515,6 +532,7 @@
   <div class="tray" id="tray"></div>
 
   <div class="controls">
+    <button class="finish" id="finishBtn" type="button" hidden>No more cards match me — finish</button>
     <button class="reset" id="resetBtn">Reset pyramid</button>
   </div>
 
@@ -600,16 +618,20 @@
   const copyBtn = document.getElementById('copyBtn');
   const copyConfirm = document.getElementById('copyConfirm');
   const trayLabel = document.getElementById('trayLabel');
+  const finishBtn = document.getElementById('finishBtn');
 
   // slotState[i] = card id or null
   const slotState = [null,null,null,null,null,null];
   let selectedCardId = null; // for tap-to-place
   let dragCardId = null;
+  // Set when the user declares "no more cards match me" with 3-5 placed,
+  // completing the exercise without filling all six slots.
+  let finishedEarly = false;
 
   // Adaptive instructions: touch devices get the tap-first phrasing
   const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   if (isTouchDevice){
-    stepsText.innerHTML = '<strong>Read</strong> the cards below — tap a card to flip it over. When one feels like you, tap <strong>Choose</strong>, then tap a spot in the pyramid to place it. Top spot = your strongest match, the two below = next closest, the bottom three = the rest of your mix. The <strong>× icon</strong> on a placed card sends it back to the list.';
+    stepsText.innerHTML = '<strong>Read</strong> the cards below — tap a card to flip it over. When one feels like you, tap <strong>Choose</strong>, then tap a spot in the pyramid to place it. Top spot = your strongest match, the two below = next closest, the bottom three = the rest of your mix. The <strong>× icon</strong> on a placed card sends it back to the list. You don\'t have to fill all six — once you\'ve placed three, a finish button appears below the cards.';
   }
 
   function toggleFlip(cardId){
@@ -874,16 +896,27 @@
 
   function updateSummary(){
     const filled = slotState.filter(x=>x!==null).length;
+    const complete = filled === 6 || (finishedEarly && filled >= 3);
 
-    progressCount.textContent = `${filled} of 6 placed`;
-    progressCount.classList.toggle('complete', filled === 6);
+    progressCount.textContent = (finishedEarly && filled < 6)
+      ? `Done — ${filled} placed`
+      : `${filled} of 6 placed`;
+    progressCount.classList.toggle('complete', complete);
 
     const remaining = CARDS.length - filled;
     trayLabel.textContent = filled === 0 ? 'The ten cards' : `The ten cards — ${remaining} left in the tray`;
 
-    if (filled === 6){
+    // Early-finish escape hatch: offered once a meaningful top-3 exists,
+    // gone once all six are placed or it's already been used.
+    finishBtn.hidden = !(filled >= 3 && filled < 6 && !finishedEarly);
+    if (!finishBtn.hidden){
+      finishBtn.textContent = `No more cards match me — finish with ${filled}`;
+    }
+
+    if (complete){
       const firstReveal = !summary.classList.contains('show');
       summaryList.innerHTML = slotState.map((id,i)=>{
+        if (id === null) return '';
         const cd = CARDS.find(c=>c.id===id);
         return `<li>${RANK_LABELS[i]}: ${cd.archetype} — "${cd.phrase}"</li>`;
       }).join('');
@@ -896,6 +929,13 @@
     }
   }
 
+  finishBtn.addEventListener('click', ()=>{
+    finishedEarly = true;
+    selectedCardId = null;
+    renderSelection();
+    updateSummary(); // reveals the summary, which scrolls itself into view
+  });
+
   function showCopyMessage(msg){
     copyConfirm.textContent = msg;
     copyConfirm.style.display = 'block';
@@ -903,9 +943,11 @@
   }
 
   copyBtn.addEventListener('click', ()=>{
-    const lines = slotState.map((id,i)=>{
+    const lines = [];
+    slotState.forEach((id,i)=>{
+      if (id === null) return;
       const cd = CARDS.find(c=>c.id===id);
-      return `${RANK_LABELS[i]}: ${cd.archetype} ("${cd.phrase}")`;
+      lines.push(`${RANK_LABELS[i]}: ${cd.archetype} ("${cd.phrase}")`);
     });
     const text = `My Family Dynamics pyramid:\n${lines.join('\n')}`;
 
@@ -976,6 +1018,7 @@
   resetBtn.addEventListener('click', ()=>{
     for (let i=0;i<6;i++) slotState[i] = null;
     selectedCardId = null;
+    finishedEarly = false;
     flippedIds.clear();
     renderAll();
   });
