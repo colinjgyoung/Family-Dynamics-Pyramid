@@ -596,7 +596,7 @@
     font-size:10.5px;
     text-transform:uppercase;
     letter-spacing:1.2px;
-    margin:13px 0 5px;
+    margin:20px 0 7px;
     padding-bottom:3px;
     border-bottom:2px solid #F3D600;
   }
@@ -609,7 +609,7 @@
   .profile-doc .p-lead-row > div{ flex:1; }
 
   .profile-doc .p-card-img{
-    width:128px;
+    width:180px;
     flex:none;
     border-radius:8px;
     display:block;
@@ -1006,11 +1006,12 @@
       return `<p>${interp(T.closeBehindLine, {archetype:c.archetype, contribution:c.contribution.toLowerCase(), tension:c.tension.toLowerCase()})}</p>`;
     }).join('');
 
-    // Sections 5 (Also in your pyramid) and 6 (What you left out) removed
-    // 2026-07-16 per Colin: the recap graphic already shows ranks 4-6, and a
-    // bare list of unchosen card names means nothing to a first-time reader.
-    // buildProfile still computes leftOutConditional (R3/R4) for a possible
-    // future home; it just doesn't render.
+    // Sections 5 (Also in your pyramid), 6 (What you left out) and 7
+    // (Interplay insight) removed 2026-07-16 per Colin: the recap graphic
+    // already shows ranks 4-6, and bare card names / pattern cross-talk mean
+    // little to a first-time reader. buildProfile still computes interplay
+    // (R1/R2/R5) and leftOutConditional (R3/R4) for a possible future home;
+    // they just don't render.
 
     return `
       <div class="p-header">
@@ -1044,10 +1045,9 @@
           <p><strong>How others can experience this pattern:</strong> ${L.othersExperience}</p>
         </div>
         ${closeBehind ? `<h2>Close behind</h2>${closeBehind}` : ''}
-        <h2>Interplay insight</h2>
-        <p>${profile.interplay}</p>
         <h2>Take it further</h2>
-        <p><strong>Growth direction:</strong> ${L.growth}. <strong>Practical move:</strong> ${L.practicalMove}</p>
+        <p><strong>Growth direction:</strong> ${L.growth}.</p>
+        <p><strong>Practical move:</strong> ${L.practicalMove}</p>
         <div class="p-reflect"><strong>Reflection question:</strong> ${L.reflection}</div>
         <p class="p-close">${T.softClose}</p>
         <div class="p-footer">
