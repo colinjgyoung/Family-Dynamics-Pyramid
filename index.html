@@ -479,6 +479,158 @@
     padding:30px 20px 40px;
   }
 
+  /* --- 1-pager profile buttons --- */
+
+  button.download-pdf{
+    background:var(--nn-black);
+    color:var(--nn-white);
+    border:none;
+    padding:12px 26px;
+    border-radius:22px;
+    font-size:0.95rem;
+    font-weight:700;
+    cursor:pointer;
+    letter-spacing:0.3px;
+    margin-top:12px;
+  }
+
+  button.download-pdf:hover{ background:#000; }
+  button.download-pdf[disabled]{ opacity:0.6; cursor:wait; }
+
+  button.print-profile{
+    background:transparent;
+    border:none;
+    color:var(--nn-black);
+    text-decoration:underline;
+    font-size:0.8rem;
+    cursor:pointer;
+    margin-top:6px;
+    padding:2px 4px;
+  }
+
+  .pdf-note{
+    font-size:0.78rem;
+    color:#666;
+    margin-top:6px;
+    display:none;
+  }
+
+  /* --- 1-pager profile (A4) --- */
+  /* 794px = A4 width at 96dpi; html2pdf captures this element off-screen,
+     and the print stylesheet shows the same DOM for the fallback path. */
+
+  #profile{
+    position:absolute;
+    left:-10000px;
+    top:0;
+    width:794px;
+    background:#fff;
+    color:#111;
+    font-family:'Source Sans Pro', Arial, Helvetica, sans-serif;
+    font-size:12.5px;
+    line-height:1.42;
+  }
+
+  #profile.generating{ left:0; z-index:-1; }
+
+  #profile .p-header{
+    background:#111;
+    color:#fff;
+    padding:16px 40px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:6px solid #F3D600;
+  }
+
+  #profile .p-header h1{
+    margin:0;
+    font-size:20px;
+    font-weight:700;
+  }
+
+  #profile .p-header .p-date{ font-size:11px; opacity:0.85; }
+
+  #profile .p-inner{ padding:14px 40px 20px; }
+
+  #profile h2{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    margin:11px 0 4px;
+    padding-bottom:2px;
+    border-bottom:2px solid #F3D600;
+  }
+
+  #profile .p-top{ display:flex; gap:22px; align-items:flex-start; }
+
+  #profile .p-lead{ flex:1; }
+
+  #profile .p-lead-title{ font-size:17px; font-weight:700; margin:2px 0 6px; }
+  #profile .p-lead-title .p-phrase{ font-weight:400; font-style:italic; }
+
+  #profile .p-pyramid{ width:225px; flex:none; padding-top:24px; }
+  #profile .p-pyr-row{ display:flex; justify-content:center; gap:4px; margin-bottom:4px; }
+  #profile .p-pyr-cell{
+    width:70px;
+    border-radius:5px;
+    font-size:8.5px;
+    font-weight:700;
+    padding:6px 3px;
+    text-align:center;
+    line-height:1.15;
+  }
+
+  #profile p{ margin:0 0 6px; }
+
+  #profile .p-cols{ display:flex; gap:18px; }
+  #profile .p-cols > div{ flex:1; }
+
+  #profile .p-working{
+    border:1px solid #dcdcd8;
+    border-radius:6px;
+    padding:8px 12px;
+    margin:2px 0;
+  }
+
+  #profile .p-working p{ margin:0 0 4px; }
+  #profile .p-working p:last-child{ margin-bottom:0; }
+
+  #profile .p-reflect{
+    background:#F3D600;
+    color:#111;
+    border-radius:6px;
+    padding:9px 12px;
+    margin:6px 0 8px;
+  }
+
+  #profile .p-close{ font-size:11px; color:#555; }
+
+  #profile .p-footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid #dcdcd8;
+    font-size:10.5px;
+    color:#555;
+  }
+
+  #profile .p-footer .p-mark{
+    background:#F3D600;
+    color:#111;
+    font-weight:700;
+    padding:1px 7px;
+    border-radius:3px;
+  }
+
+  @media print{
+    header, main, footer, .selection-banner{ display:none !important; }
+    body{ background:#fff; }
+    #profile{ position:static; left:auto; width:auto; }
+  }
+
 </style>
 </head>
 <body>
@@ -539,11 +691,16 @@
   <div class="summary" id="summary">
     <h3>Your mix, ranked</h3>
     <ol id="summaryList"></ol>
+    <button class="download-pdf" id="pdfBtn" type="button" hidden>Download my 1-pager (PDF)</button>
+    <div><button class="print-profile" id="printBtn" type="button" hidden>or print this page</button></div>
+    <div id="pdfNote" class="pdf-note" aria-live="polite"></div>
     <button class="copy-result" id="copyBtn" type="button">Copy my pyramid</button>
     <div id="copyConfirm" aria-live="polite" style="font-size:0.78rem; color:#666; margin-top:6px; display:none;">Copied — paste it into an email or chat to share with your team.</div>
   </div>
 
 </main>
+
+<div id="profile" aria-hidden="true"></div>
 
 <footer>
   nnherit Dynamics™ — Family Dynamics deck. Internal facilitation prototype.
@@ -552,47 +709,160 @@
 <script>
 (function(){
 
+  // Profile copy (inTheFamily..reflection) is verbatim from
+  // 2026-07-15-pyramid-profile-content-model.md — do not edit here.
   const CARDS = [
     { id:1, colour:'#1B4D3E', light:false, phrase:'The Right Way', archetype:'The Standard Setter',
       drive:'To maintain order and correctness', contribution:'Structure, clarity, discipline',
       tension:'Rigidity, moral pressure, inflexibility', growth:'Balance standards with flexibility',
-      frontImg:'cards/standard-setter-front.webp', backImg:'cards/standard-setter-back.webp' },
+      frontImg:'cards/standard-setter-front.webp', backImg:'cards/standard-setter-back.webp',
+      growthTarget:7, stressTarget:4,
+      inTheFamily:`The keeper of how things should be done. Often the one who protects quality, process, and fairness — and the one who notices every corner being cut. In a family business this pattern frequently carries the standards the founder generation set, sometimes long after anyone has asked whether they still fit.`,
+      goodDay:`the standards stay, but the grip loosens. More than one right way becomes visible. There is room for experiment, humour, and a next generation doing things differently without it feeling like decline.`,
+      underPressure:`criticism turns inward. The person starts feeling unappreciated and misunderstood — "I hold everything to a standard and nobody notices." Withdrawal, moodiness, and quiet resentment replace the usual steadiness.`,
+      triggers:`a sibling cutting corners without consequence; being called rigid at the dinner table and in the boardroom in the same week; watching a decision get made on relationships rather than merit.`,
+      emails:`precise, complete, proofread — and it notices when yours aren't. Give it a clear ask, a deadline, and no loose ends.`,
+      disagreement:`argues the principle, not the preference. Direct, sometimes sharp; it concedes to a fairer standard, rarely to pressure.`,
+      smallTalk:`polite but brief. Connection happens through doing things properly together, not through chat.`,
+      othersExperience:`feeling corrected or controlled; raising a problem and receiving solutions and recommendations when what they wanted was a hearing; the quiet sense that nothing is ever quite good enough.`,
+      practicalMove:`before correcting the next piece of work, ask what the standard is protecting — and whether it still needs protecting.`,
+      reflection:`which of your standards belongs to the business, and which belongs to an earlier version of it?` },
     { id:2, colour:'#E8720C', light:false, phrase:'Here to Help', archetype:'The Supporter',
       drive:'To help and be valued by others', contribution:'Care, generosity, relationship building',
       tension:'Over-involvement, hidden expectations', growth:'Support without losing boundaries',
-      frontImg:'cards/supporter-front.webp', backImg:'cards/supporter-back.webp' },
+      frontImg:'cards/supporter-front.webp', backImg:'cards/supporter-back.webp',
+      growthTarget:4, stressTarget:8,
+      inTheFamily:`The relationship-carrier. Knows what every family member needs before they say it, smooths arrivals and departures, and quietly makes the enterprise liveable. Often holds the family together across generations — and often without a formal role that names any of it.`,
+      goodDay:`their own needs and views come into the picture. They can say "here is what I want" without dressing it up as what someone else needs, and their care becomes a choice rather than a reflex.`,
+      underPressure:`the unacknowledged ledger comes out. Years of uncounted help converts into demands, blame, and surprising aggression — "after everything I have done for this family."`,
+      triggers:`help being treated as furniture; being left out of a decision after years of holding things together; a successor or adviser taking over a relationship they built.`,
+      emails:`warm openers and personal questions; the actual request often arrives softened, or last. Reads tone between the lines — and sometimes into them.`,
+      disagreement:`accommodates first, hints second, erupts late. Disagreement lands better framed as repairing the relationship than winning the point.`,
+      smallTalk:`its element — remembers the birthday, the children's names, the last conversation. It is not small to this pattern; it is the work.`,
+      othersExperience:`cared for, and sometimes managed. Help can arrive with invisible strings, and refusing it can feel like rejecting the person.`,
+      practicalMove:`name one thing you need from the family this quarter, out loud, before helping anyone else with theirs.`,
+      reflection:`what would you ask for, if asking did not feel like taking?` },
     { id:3, colour:'#4FC3E0', light:false, phrase:'I Will Be the Best', archetype:'The Driver',
       drive:'To achieve and prove capability', contribution:'Momentum, ambition, visible progress',
       tension:'Pressure, comparison, performance focus', growth:'Align success with collective goals',
-      frontImg:'cards/driver-front.webp', backImg:'cards/driver-back.webp' },
+      frontImg:'cards/driver-front.webp', backImg:'cards/driver-back.webp',
+      growthTarget:6, stressTarget:9,
+      inTheFamily:`The engine of visible progress. Sets targets, hits them, and makes the business look good doing it. In a family firm this pattern often carries the weight of proving the next generation is worthy — or proving the founder's success was no accident.`,
+      goodDay:`achievement gets anchored to the group. Success is defined with the family rather than in front of it, loyalty tempers ambition, and the person can commit to goals that will never appear on a highlight reel.`,
+      underPressure:`the engine stalls. Numbness, busywork, and going through the motions replace momentum. The person keeps up appearances while quietly disengaging — the family often notices the polish before it notices the absence.`,
+      triggers:`achievements credited to the family name rather than the work; a sibling promoted on birth order rather than results; success in the business earning nothing at the dinner table.`,
+      emails:`short, fast, bulleted, action-first. Replies at speed and expects the same; long threads get skimmed.`,
+      disagreement:`treats it as a contest to close efficiently — argues outcomes, not feelings, and may agree quickly just to keep things moving.`,
+      smallTalk:`purposeful. Charming and brief, often with one eye on what the conversation can do.`,
+      othersExperience:`like line items on someone else's plan. Slower or less polished contributions can feel dismissed, and it can be hard to tell the person from the performance.`,
+      practicalMove:`pick one goal this year that only counts if the whole family system wins.`,
+      reflection:`who is the performance for — and what would remain if they stopped watching?` },
     { id:4, colour:'#F0C808', light:true, phrase:'I Am Me', archetype:'The Catalyst',
       drive:'To express identity and meaning', contribution:'Creativity, authenticity, emotional depth',
       tension:'Sensitivity, feeling misunderstood', growth:'Channel emotion into contribution',
-      frontImg:'cards/catalyst-front.webp', backImg:'cards/catalyst-back.webp' },
+      frontImg:'cards/catalyst-front.webp', backImg:'cards/catalyst-back.webp',
+      growthTarget:1, stressTarget:2,
+      inTheFamily:`The one who insists the family look at what it actually feels. Brings creativity, emotional honesty, and a refusal to pretend — often the person who says the true thing at the meeting everyone else planned to survive politely.`,
+      goodDay:`feeling turns into craft. Emotional depth gets channelled through discipline and structure, and the person becomes a principled builder rather than a sensitive commentator.`,
+      underPressure:`the need to be seen turns into clinging. The person over-helps, over-gives, and tracks who noticed — needing the family in exactly the moments they claim to stand apart from it.`,
+      triggers:`being cast as "the difficult one" or "the creative one" and nothing else; a contribution copied without credit; the family treating sameness as loyalty.`,
+      emails:`expressive and tone-sensitive. A curt reply will be read three times and taken to heart; it writes with care and expects meaning to be met with meaning.`,
+      disagreement:`emotionally direct — says what everyone else is avoiding, and withdraws if the response feels dismissive. Will not fake agreement for the sake of comfort.`,
+      smallTalk:`little patience for it. Wants the real conversation or none; depth is its handshake.`,
+      othersExperience:`pulled into an intensity they didn't order; feeling responsible for managing the person's moods; honesty that arrives without anaesthetic.`,
+      practicalMove:`take the thing you feel most strongly about in the business and turn it into one concrete proposal with a date on it.`,
+      reflection:`where does being different serve the family — and where has it become a way of staying safely outside it?` },
     { id:5, colour:'#1F3A93', light:false, phrase:'I Know Everything', archetype:'The Strategist',
       drive:'To understand systems and gain insight', contribution:'Analysis, curiosity, intellectual clarity',
       tension:'Detachment, withholding participation', growth:'Share knowledge earlier',
-      frontImg:'cards/strategist-front.webp', backImg:'cards/strategist-back.webp' },
+      frontImg:'cards/strategist-front.webp', backImg:'cards/strategist-back.webp',
+      growthTarget:8, stressTarget:7,
+      inTheFamily:`The quiet analyst. Reads the numbers, the market, and the family with the same detachment, and is often right — from a distance. In a family business this pattern frequently becomes the private library everyone consults and nobody quite includes.`,
+      goodDay:`knowledge turns into weight-bearing action. The person steps into the room, takes a position, and spends their insight instead of saving it.`,
+      underPressure:`focus scatters. The person hops between ideas, projects, and rabbit holes — busy everywhere, landed nowhere — using motion the way they usually use distance.`,
+      triggers:`analysis requested and then ignored; emotional demands with no warning; family gatherings where presence is expected but the agenda never comes.`,
+      emails:`prefers writing to meetings. Concise, factual, sometimes curt without meaning to be; slow replies are processing, not disinterest. Unscheduled calls feel like ambushes.`,
+      disagreement:`debates the evidence and detaches from the heat. Pressed emotionally, it leaves the room mentally first and physically second.`,
+      smallTalk:`an energy cost with no obvious information yield — skipped when possible, endured when not.`,
+      othersExperience:`kept at arm's length. The withholding can read as indifference or superiority, and getting a view out of it before the analysis is finished is hard work.`,
+      practicalMove:`share the half-finished analysis this week — before it is airtight, while it can still change the decision.`,
+      reflection:`what does the family lose while you finish being sure?` },
     { id:6, colour:'#7B3F99', light:false, phrase:'Trust Me', archetype:'The Stabiliser',
       drive:'To maintain trust and reliability', contribution:'Loyalty, dependability, emotional safety',
       tension:'Over-responsibility, difficulty saying no', growth:'Trust shared responsibility',
-      frontImg:'cards/stabiliser-front.webp', backImg:'cards/stabiliser-back.webp' },
+      frontImg:'cards/stabiliser-front.webp', backImg:'cards/stabiliser-back.webp',
+      growthTarget:9, stressTarget:3,
+      inTheFamily:`The loyalty anchor. Spots risks early, keeps promises, and holds the enterprise steady through transitions. Often the person the founder trusts most and the one who worries enough for everyone — a quiet warning system the family relies on more than it realises.`,
+      goodDay:`vigilance settles into calm. Trust extends beyond the tested inner circle, worst cases stop running the meeting, and the person's steadiness becomes reassuring rather than braced.`,
+      underPressure:`anxiety goes into overdrive dressed as productivity. The person works harder, faster, more visibly — managing fear through performance while trusting no one else's work.`,
+      triggers:`a leadership change with no stated plan; loyalty repaid with surprise decisions; being asked to trust an outsider with something they have protected for years.`,
+      emails:`thorough and question-rich. Wants context, contingencies, and to know who else has signed off; follows up to double-check.`,
+      disagreement:`tests ideas by attacking them. Devil's advocacy is diligence, not disloyalty — the yes comes once the concerns have been taken seriously.`,
+      smallTalk:`warms slowly. Humour and shared history are the bonds; trust builds in small, reliable increments.`,
+      othersExperience:`the questioning can feel like distrust, the what-if scanning like negativity — and decisions can stall while every risk gets a rehearsal.`,
+      practicalMove:`hand one thing you currently guard to someone else — fully, with no shadow copy.`,
+      reflection:`what are you protecting the family from — and have you asked whether they still need it?` },
     { id:7, colour:'#E85D9E', light:false, phrase:'Life Is for the Taking', archetype:'The Initiator',
       drive:'To experience possibility and freedom', contribution:'Energy, exploration, new opportunities',
       tension:'Impulsiveness, unfinished initiatives', growth:'Commit and follow through',
-      frontImg:'cards/initiator-front.webp', backImg:'cards/initiator-back.webp' },
+      frontImg:'cards/initiator-front.webp', backImg:'cards/initiator-back.webp',
+      growthTarget:5, stressTarget:1,
+      inTheFamily:`The possibility engine. Sees openings everywhere, starts things, and keeps the enterprise from calcifying. Often the family member with three ventures running and a fourth in mind — energising to some, exhausting to the ones who finish what gets started.`,
+      goodDay:`breadth gains depth. The person picks fewer things and goes further into them, and enthusiasm matures into insight the family can build on.`,
+      underPressure:`the free spirit turns sharp and judgmental. Frustration comes out as criticism — of the family's slowness, caution, and attachment to how things have always been done — with a rigidity they would never accept in others.`,
+      triggers:`every new idea greeted with why it will not work; being handed the maintenance work while others get the future; a family calendar that decides their year for them.`,
+      emails:`enthusiastic, quick, occasionally chaotic — three ideas per message, follow-up optional. Long procedural emails go unread.`,
+      disagreement:`reframes toward the upside, jokes at the heavy moment, and is hard to pin to a position. Often changes the subject before conceding a point.`,
+      smallTalk:`superb at it — stories, energy, laughter. Keeps rooms light, sometimes when they shouldn't be.`,
+      othersExperience:`sharing a difficulty and getting silver linings when what they wanted was company; commitments that feel provisional until the day they happen.`,
+      practicalMove:`choose one initiative and stay with it past the point where it stops being fun.`,
+      reflection:`which option are you keeping open — and what is keeping it open costing the people around you?` },
     { id:8, colour:'#D7263D', light:false, phrase:'My Way or the Highway', archetype:'The Controller',
       drive:'To protect autonomy and control outcomes', contribution:'Strength, decisiveness, courage',
       tension:'Domination, conflict escalation', growth:'Use strength with restraint',
-      frontImg:'cards/controller-front.webp', backImg:'cards/controller-back.webp' },
+      frontImg:'cards/controller-front.webp', backImg:'cards/controller-back.webp',
+      growthTarget:2, stressTarget:5,
+      inTheFamily:`The protector. Takes the hit, makes the call, and shields the family from threats real and imagined. In founder generations this pattern built the business; in transitions it is often the pattern that cannot put the business down.`,
+      goodDay:`strength turns toward care. Power gets used to open doors for others, protection becomes generosity, and the person can be moved by the family instead of only moving it.`,
+      underPressure:`the door closes. The person withdraws, watches, and plans — trust narrows to almost no one, and the family meets a wall where the fighter used to be.`,
+      triggers:`a decision made behind their back; weakness — their own or the firm's — exposed to outsiders; being managed, handled, or worked around by their own family.`,
+      emails:`blunt and brief, and it reads harsher than intended. Wants the bottom line in the first sentence; silence means fine, length means trouble.`,
+      disagreement:`goes straight at it and raises the temperature. Respects people who push back; quietly discounts people who fold.`,
+      smallTalk:`minimal. Respect is shown through straight talk, not pleasantries.`,
+      othersExperience:`intimidating even at rest. People pre-edit what they say around it — so bad news arrives late or not at all — and "just being clear" can land as being steamrolled.`,
+      practicalMove:`in the next disagreement, ask one question before stating one position.`,
+      reflection:`who in the family is strong enough to hear your fear — and have you let them?` },
     { id:9, colour:'#8BC34A', light:true, phrase:'Get Along', archetype:'The Integrator',
       drive:'To maintain harmony in the system', contribution:'Mediation, perspective, calm',
       tension:'Avoidance of difficult issues', growth:'Engage with constructive conflict',
-      frontImg:'cards/integrator-front.webp', backImg:'cards/integrator-back.webp' },
+      frontImg:'cards/integrator-front.webp', backImg:'cards/integrator-back.webp',
+      growthTarget:3, stressTarget:6,
+      inTheFamily:`The peace-keeper. Absorbs tension, sees every side, and keeps the family able to sit at one table. Often the person both camps confide in — and the one whose own position nobody can state.`,
+      goodDay:`the mediator develops a direction. They name what they want, push for it, and discover the family can survive their opinion — and is stronger for hearing it.`,
+      underPressure:`easy-going becomes anxious scanning. The person second-guesses, seeks reassurance, and stalls decisions — keeping the peace by keeping everything unresolved.`,
+      triggers:`being pushed to pick a side between siblings or generations; conflict at the table with no exit; their compliance being mistaken for agreement one time too many.`,
+      emails:`agreeable and unhurried. Asks arrive softened — "if it's easy", "whatever works for everyone" — and replies to conflict-laden threads can take days.`,
+      disagreement:`avoided out loud, expressed sideways — the slow-walked task, the yes that behaves like a no.`,
+      smallTalk:`easy and generous. A good listener people relax around, though the conversation can meander past its point.`,
+      othersExperience:`never quite sure where it stands. Agreement can't always be banked, and decisions drift while everyone's view gets accommodated.`,
+      practicalMove:`in the next family disagreement, state your own position first — before summarising everyone else's.`,
+      reflection:`what has staying agreeable cost you — and who benefits from you never saying it?` },
     { id:10, colour:'#FFFFFF', light:true, phrase:'Peace', archetype:'The Steward',
       drive:'To guide responsibly and ethically', contribution:'Wisdom, long-term thinking, mentorship',
       tension:'Moral authority, reluctance to adapt', growth:'Stay open to new perspectives',
-      frontImg:'cards/steward-front.webp', backImg:'cards/steward-back.webp' }
+      frontImg:'cards/steward-front.webp', backImg:'cards/steward-back.webp',
+      // Steward = 9w1 (confirmed 2026-07-15): same arrows as the Integrator by design.
+      growthTarget:3, stressTarget:6,
+      inTheFamily:`The long-view guide. Thinks in generations, mentors rather than manages, and holds the question of what the enterprise is for. Often an elder or a values-carrier — the person others go to when the question is bigger than this year's numbers.`,
+      goodDay:`the long view gets a plan. Stewardship turns from holding to building — legacy becomes something the person actively moves forward, mentorship produces successors rather than audiences, and "what we stand for" gets a date and a next step.`,
+      underPressure:`peace turns into anxious vigilance. The person scans for threats to the legacy, seeks reassurance, and stalls decisions — and the 1-wing gives the worry a moral edge, so anxiety arrives in the room as "this isn't being done properly."`,
+      triggers:`values they carried for decades dismissed as outdated; a sale, pivot, or merger that treats the legacy as an asset line; being consulted ceremonially rather than seriously.`,
+      emails:`measured, courteous, values-inflected. Replies are unhurried and weighed for fairness; it prefers one considered exchange to a rapid thread.`,
+      disagreement:`rarely raises its voice. Resistance comes as quiet, principled immovability — a calm no that outlasts everyone else's arguments.`,
+      smallTalk:`gracious and warm when the subject is the family and its story; less at ease with trivia than with meaning.`,
+      othersExperience:`the calm can read as passive authority — the sense of being quietly measured against standards nobody stated. Its disappointment lands heavier than another pattern's anger would.`,
+      practicalMove:`ask the youngest person in the enterprise what should change — and hold the answer for a week before responding.`,
+      reflection:`what are you preserving because it matters — and what are you preserving because letting go feels like betrayal?` }
   ];
 
   const RANK_LABELS = ['Top choice','2nd place','3rd place','4th place','5th place','6th place'];
@@ -603,6 +873,140 @@
   // Card ids currently showing their back face. Tracked separately from the
   // DOM because renderAll() rebuilds every card element from scratch.
   const flippedIds = new Set();
+
+  // Fixed template strings for the 1-page profile — verbatim from
+  // 2026-07-15-pyramid-profile-logic.md. Do not edit here.
+  const PROFILE_TEMPLATES = {
+    title: 'Your Family Dynamics pyramid',
+    goodDayIntro: `On a good day, this pattern borrows the best of {G}:`,
+    underPressureIntro: `Under pressure, it tends to drift toward the strained side of {S}:`,
+    closeBehindLine: `{archetype} — brings {contribution}; watch for {tension}.`,
+    alsoPlaced: `Lower in your pyramid you also placed {a}, {b} and {c} — present, but not how you lead.`,
+    leftOutIntro: `The cards you didn't choose say something too. Often they are the patterns we least recognise in ourselves — or the ones we quietly rely on someone else in the family to carry.`,
+    leftOutList: `You left out: {list}.`,
+    r1High: `Your growth direction is already close: you placed {G} near the top yourself. On your best days these two patterns are probably already working together.`,
+    r1Low: `Your growth direction, {G}, sits low in your pyramid — recognised, but not yet how you lead. That gap is where this pattern usually has the most room to grow.`,
+    r2High: `Note that {S} — the pattern yours drifts toward under pressure — also sits high in your pyramid. When both are running, it can be hard to tell which one is choosing.`,
+    r2Fallback: `Keep an eye on {S}: it is where your lead pattern goes under pressure, whether or not you recognise it as yours.`,
+    r3: `One of them, {G}, is exactly where your lead pattern grows on a good day — worth a second look at the card you passed over.`,
+    r4: `One of them, {S}, is where your lead pattern drifts under pressure. Leaving it out doesn't mean it leaves you out.`,
+    r5: `The Steward and the Integrator are close cousins — both seek peace; the Steward holds it to a standard, the Integrator holds it for the group. Having both near the top doubles the strength, and doubles the risk that hard things stay unsaid.`,
+    softClose: `This pyramid is a snapshot, not a verdict — most people would build it differently in a different season. The Family Dynamics deck is built to take this conversation into the room with the people it describes.`
+  };
+
+  function interp(tpl, map){
+    return tpl.replace(/\{(\w+)\}/g, (m, k)=> (k in map ? map[k] : m));
+  }
+
+  // Assembles the deterministic profile data per the logic file's rules.
+  // R6 (partial pyramids) is disabled in v1 — buttons require all 6 placed —
+  // but the assembly itself tolerates shorter rankings so it can be enabled later.
+  function buildProfile(ranking, unchosen){
+    const card = id => CARDS.find(c=>c.id===id);
+    const L = card(ranking[0]);
+    const G = card(L.growthTarget);
+    const S = card(L.stressTarget);
+    const posG = ranking.indexOf(G.id); // -1 = unchosen
+    const posS = ranking.indexOf(S.id);
+    const T = PROFILE_TEMPLATES;
+
+    // Section 7 — R1 first, falling through to R2
+    let interplay;
+    if (posG > -1 && posG < 3){
+      interplay = interp(T.r1High, {G: G.archetype});
+    } else if (posG >= 3){
+      interplay = interp(T.r1Low, {G: G.archetype});
+    } else if (posS > -1 && posS < 3){
+      interplay = interp(T.r2High, {S: S.archetype});
+    } else {
+      interplay = interp(T.r2Fallback, {S: S.archetype});
+    }
+    // R5 — Steward + Integrator both in ranks 1-3
+    const top3 = ranking.slice(0,3);
+    if (top3.includes(9) && top3.includes(10)){
+      interplay += ' ' + T.r5;
+    }
+
+    // Section 6 conditional — at most one; R3 outranks R4
+    let leftOutConditional = null;
+    if (posG === -1) leftOutConditional = interp(T.r3, {G: G.archetype});
+    else if (posS === -1) leftOutConditional = interp(T.r4, {S: S.archetype});
+
+    return { L, G, S, ranking, unchosen, interplay, leftOutConditional };
+  }
+
+  function renderProfile(profile){
+    const card = id => CARDS.find(c=>c.id===id);
+    const T = PROFILE_TEMPLATES;
+    const { L, G, S, ranking, unchosen } = profile;
+    const dateStr = new Date().toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+
+    const cell = id => {
+      const c = card(id);
+      const border = c.colour.toUpperCase() === '#FFFFFF' ? 'border:1px solid #ccc;' : '';
+      return `<div class="p-pyr-cell" style="background:${c.colour}; color:${c.light ? '#111' : '#fff'}; ${border}">${c.archetype}</div>`;
+    };
+    const rows = [ranking.slice(0,1), ranking.slice(1,3), ranking.slice(3,6)]
+      .filter(r=>r.length)
+      .map(r=>`<div class="p-pyr-row">${r.map(cell).join('')}</div>`).join('');
+
+    const closeBehind = ranking.slice(1,3).map(id=>{
+      const c = card(id);
+      return `<p>${interp(T.closeBehindLine, {archetype:c.archetype, contribution:c.contribution.toLowerCase(), tension:c.tension.toLowerCase()})}</p>`;
+    }).join('');
+
+    const lower = ranking.slice(3,6).map(id=>card(id).archetype);
+    const alsoPlaced = ranking.length === 6
+      ? `<h2>Also in your pyramid</h2><p>${interp(T.alsoPlaced, {a:lower[0], b:lower[1], c:lower[2]})}</p>`
+      : '';
+
+    const leftOutNames = unchosen.map(id=>card(id).archetype).join(', ');
+    const conditional = profile.leftOutConditional ? ' ' + profile.leftOutConditional : '';
+
+    document.getElementById('profile').innerHTML = `
+      <div class="p-header">
+        <h1>${T.title}</h1>
+        <span class="p-date">${dateStr}</span>
+      </div>
+      <div class="p-inner">
+        <div class="p-top">
+          <div class="p-lead">
+            <h2>Your lead pattern</h2>
+            <div class="p-lead-title">${L.archetype} — <span class="p-phrase">"${L.phrase}"</span></div>
+            <p><strong>In the family enterprise.</strong> ${L.inTheFamily}</p>
+          </div>
+          <div class="p-pyramid">${rows}</div>
+        </div>
+        <div class="p-cols">
+          <div><p><em>${interp(T.goodDayIntro, {G: G.archetype})}</em> ${L.goodDay}</p></div>
+          <div><p><em>${interp(T.underPressureIntro, {S: S.archetype})}</em> ${L.underPressure}</p></div>
+        </div>
+        <p><strong>What tends to trigger the shift:</strong> ${L.triggers}</p>
+        <h2>Working with you</h2>
+        <div class="p-working">
+          <p><strong>Emails and updates:</strong> ${L.emails}</p>
+          <p><strong>In disagreement:</strong> ${L.disagreement}</p>
+          <p><strong>Small talk:</strong> ${L.smallTalk}</p>
+          <p><strong>How others can experience this pattern:</strong> ${L.othersExperience}</p>
+        </div>
+        ${closeBehind ? `<h2>Close behind</h2>${closeBehind}` : ''}
+        ${alsoPlaced}
+        <h2>What you left out</h2>
+        <p>${T.leftOutIntro}</p>
+        <p>${interp(T.leftOutList, {list: leftOutNames})}${conditional}</p>
+        <h2>Interplay insight</h2>
+        <p>${profile.interplay}</p>
+        <h2>Take it further</h2>
+        <p><strong>Growth direction:</strong> ${L.growth}. <strong>Practical move:</strong> ${L.practicalMove}</p>
+        <div class="p-reflect"><strong>Reflection question:</strong> ${L.reflection}</div>
+        <p class="p-close">${T.softClose}</p>
+        <div class="p-footer">
+          <span class="p-mark">nnherit</span>
+          <span>nnherit.com · ${dateStr}</span>
+        </div>
+      </div>
+    `;
+  }
 
   const tray = document.getElementById('tray');
   const pyramid = document.getElementById('pyramid');
@@ -619,6 +1023,9 @@
   const copyConfirm = document.getElementById('copyConfirm');
   const trayLabel = document.getElementById('trayLabel');
   const finishBtn = document.getElementById('finishBtn');
+  const pdfBtn = document.getElementById('pdfBtn');
+  const printBtn = document.getElementById('printBtn');
+  const pdfNote = document.getElementById('pdfNote');
 
   // slotState[i] = card id or null
   const slotState = [null,null,null,null,null,null];
@@ -913,6 +1320,11 @@
       finishBtn.textContent = `No more cards match me — finish with ${filled}`;
     }
 
+    // 1-pager requires a full pyramid in v1 (R6 partial profiles disabled)
+    const fullPyramid = filled === 6;
+    pdfBtn.hidden = !fullPyramid;
+    printBtn.hidden = !fullPyramid;
+
     if (complete){
       const firstReveal = !summary.classList.contains('show');
       summaryList.innerHTML = slotState.map((id,i)=>{
@@ -934,6 +1346,83 @@
     selectedCardId = null;
     renderSelection();
     updateSummary(); // reveals the summary, which scrolls itself into view
+  });
+
+  // --- 1-pager PDF / print ---
+
+  function currentProfileInputs(){
+    const ranking = slotState.filter(id=>id!==null);
+    const unchosen = CARDS.map(c=>c.id).filter(id=>!ranking.includes(id));
+    return { ranking, unchosen };
+  }
+
+  // html2canvas + jsPDF from cdnjs — the same pair html2pdf.js bundles, loaded
+  // individually because the 0.10.x bundle ships html2canvas 1.0.0-rc.5, which
+  // silently renders a blank canvas in current Chrome (verified 2026-07-16).
+  const pdfLibs = [
+    { global:'html2canvas', src:'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js' },
+    { global:'jspdf', src:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' }
+  ];
+  const pdfLibLoaders = {};
+  function loadPdfLibs(){
+    return Promise.all(pdfLibs.map(lib=>{
+      if (window[lib.global]) return Promise.resolve();
+      if (!pdfLibLoaders[lib.global]){
+        pdfLibLoaders[lib.global] = new Promise((resolve, reject)=>{
+          const s = document.createElement('script');
+          s.src = lib.src;
+          s.onload = resolve;
+          s.onerror = ()=>{ pdfLibLoaders[lib.global] = null; reject(new Error(lib.global + ' CDN unavailable')); };
+          document.head.appendChild(s);
+        });
+      }
+      return pdfLibLoaders[lib.global];
+    }));
+  }
+
+  function showPdfNote(msg){
+    pdfNote.textContent = msg;
+    pdfNote.style.display = 'block';
+    setTimeout(()=>{ pdfNote.style.display = 'none'; }, 8000);
+  }
+
+  pdfBtn.addEventListener('click', ()=>{
+    const { ranking, unchosen } = currentProfileInputs();
+    if (ranking.length !== 6) return;
+    renderProfile(buildProfile(ranking, unchosen));
+
+    const profileEl = document.getElementById('profile');
+    pdfBtn.disabled = true;
+    const prevLabel = pdfBtn.textContent;
+    pdfBtn.textContent = 'Preparing your 1-pager…';
+    profileEl.classList.add('generating');
+
+    loadPdfLibs().then(()=>{
+      return window.html2canvas(profileEl, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+    }).then((canvas)=>{
+      const pdf = new window.jspdf.jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+      const pageW = 210;
+      const imgH = canvas.height * pageW / canvas.width;
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageW, imgH);
+      pdf.save('my-family-dynamics-pyramid.pdf');
+    }).then(()=>{
+      showPdfNote('Downloaded — look for my-family-dynamics-pyramid.pdf in your downloads.');
+    }).catch(()=>{
+      // CDN blocked or generation failed: same DOM, print dialog instead
+      showPdfNote('Couldn\'t load the PDF generator — opening the print dialog instead. Choose "Save as PDF" there.');
+      window.print();
+    }).finally(()=>{
+      profileEl.classList.remove('generating');
+      pdfBtn.disabled = false;
+      pdfBtn.textContent = prevLabel;
+    });
+  });
+
+  printBtn.addEventListener('click', ()=>{
+    const { ranking, unchosen } = currentProfileInputs();
+    if (ranking.length !== 6) return;
+    renderProfile(buildProfile(ranking, unchosen));
+    window.print();
   });
 
   function showCopyMessage(msg){

@@ -2,7 +2,7 @@
 
 **Live app:** https://colinjgyoung.github.io/Family-Dynamics-Pyramid/
 
-A single self-contained `index.html` — no build step, no dependencies except a Google Fonts CDN link. Implements the **Character Pyramid** facilitation exercise from the Family Dynamics deck: rank 6 of the 10 archetype cards into a 1-2-3 pyramid by drag-and-drop or tap-to-place, flip any card to see its back.
+A single self-contained `index.html` — no build step; external dependencies are a Google Fonts CDN link and html2pdf.js (lazy-loaded from cdnjs only when a PDF is requested, with a no-CDN print fallback). Implements the **Character Pyramid** facilitation exercise from the Family Dynamics deck: rank 6 of the 10 archetype cards into a 1-2-3 pyramid, flip any card to read its back, and download a personal 1-page PDF profile of your mix.
 
 ## Card content source
 
@@ -24,12 +24,14 @@ No build step needed — the file is deployment-ready as-is.
 
 ## What's in this version
 
-Merged from an earlier Replit prototype Colin built (PersonalityCardSelector):
-
+- **Personal 1-pager (PDF)** — once all 6 slots are filled, a primary "Download my 1-pager (PDF)" button generates a designed A4 profile (`my-family-dynamics-pyramid.pdf`) via html2pdf.js from cdnjs: lead pattern with its good-day/under-pressure arrows, a "Working with you" interpersonal snapshot, the lower ranks, the unchosen cards, one interplay insight, and a reflection question. All copy and rules come from the nnherit project's `2026-07-15-pyramid-profile-content-model.md` and `2026-07-15-pyramid-profile-logic.md` (R7 cluster rule excluded from v1; profile requires all 6 cards placed). A secondary "or print this page" action prints the same profile DOM and doubles as the fallback if the CDN is blocked.
+- **Early finish** — after placing 3 cards, a "No more cards match me — finish with N" button completes the exercise with a partial pyramid (summary + copy only; the 1-pager needs all 6).
+- **Real card art** — optimized WebP scans of the printed cards (fronts and backs) in `cards/`, shown large in a scannable tray; click/tap a card to flip it, use its Choose button to place it.
 - **Progress counter** ("X of 6 placed") always visible above the pyramid.
 - **Adaptive instructions** — detects touch devices and swaps to tap-first phrasing.
-- **Explicit selection banner** — when a card is picked up, a banner names it and states exactly what to do next, addressing a real UX bug from the Replit version (clicking a card felt like it should flip it, not enter placement mode).
-- **"Copy my pyramid" button** — once all 6 slots are filled, copies a plain-text summary to the clipboard. Stands in for the Replit app's email/1-pager/"bonus challenge" sharing feature, which needed a backend that doesn't fit a static GitHub Pages file.
+- **Selection banner** — fixed to the bottom of the viewport while a card is chosen, naming it and the next step.
+- **Keyboard accessible** — Tab/Enter/Esc drive the whole exercise; focus survives re-renders.
+- **"Copy my pyramid" button** — tertiary action; copies a plain-text summary to the clipboard.
 
 ## Decisions made since the Cowork handoff
 
