@@ -446,7 +446,7 @@
   button.copy-result:hover{ background:var(--nn-black); color:var(--nn-white); }
 
   .summary{
-    max-width:520px;
+    max-width:860px;
     margin:24px auto 0;
     background:var(--nn-white);
     border:1px solid var(--nn-line);
@@ -519,59 +519,105 @@
   /* 794px = A4 width at 96dpi; html2pdf captures this element off-screen,
      and the print stylesheet shows the same DOM for the fallback path. */
 
+  .profile-doc{
+    background:#fff;
+    color:#111;
+    font-family:'Source Sans Pro', Arial, Helvetica, sans-serif;
+    font-size:11.5px;
+    line-height:1.36;
+  }
+
   #profile{
     position:absolute;
     left:-10000px;
     top:0;
     width:794px;
-    background:#fff;
-    color:#111;
-    font-family:'Source Sans Pro', Arial, Helvetica, sans-serif;
-    font-size:12.5px;
-    line-height:1.42;
   }
 
-  #profile.generating{ left:0; z-index:-1; }
+  /* During capture the sheet must be genuinely on-screen — html2canvas
+     produces blank output for far-off-screen elements in some browsers.
+     The overlay hides the app behind it so the flash looks intentional. */
+  #profile.generating{ left:0; top:0; position:fixed; z-index:9999; }
 
-  #profile .p-header{
+  #pdfOverlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(244,244,242,0.97);
+    z-index:9998;
+    align-items:flex-end;
+    justify-content:center;
+    padding-bottom:40px;
+    font-weight:600;
+    color:#555;
+  }
+
+  #pdfOverlay.show{ display:flex; }
+
+  #profilePreview{
+    display:none;
+    margin:18px 0 14px;
+    border:1px solid var(--nn-line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+
+  #profilePreview.show{ display:block; }
+
+  @media (max-width:700px){
+    .profile-doc .p-top, .profile-doc .p-cols{ flex-direction:column; }
+    .profile-doc .p-pyramid{ width:100%; padding-top:0; }
+  }
+
+  .profile-doc .p-header{
     background:#111;
     color:#fff;
-    padding:16px 40px;
+    padding:13px 36px;
     display:flex;
     justify-content:space-between;
     align-items:center;
     border-bottom:6px solid #F3D600;
   }
 
-  #profile .p-header h1{
+  .profile-doc .p-header h1{
     margin:0;
     font-size:20px;
     font-weight:700;
   }
 
-  #profile .p-header .p-date{ font-size:11px; opacity:0.85; }
+  .profile-doc .p-header .p-date{ font-size:11px; opacity:0.85; }
 
-  #profile .p-inner{ padding:14px 40px 20px; }
+  .profile-doc .p-inner{ padding:10px 36px 14px; }
 
-  #profile h2{
-    font-size:11px;
+  .profile-doc h2{
+    font-size:10.5px;
     text-transform:uppercase;
     letter-spacing:1px;
-    margin:11px 0 4px;
+    margin:7px 0 3px;
     padding-bottom:2px;
     border-bottom:2px solid #F3D600;
   }
 
-  #profile .p-top{ display:flex; gap:22px; align-items:flex-start; }
+  .profile-doc .p-top{ display:flex; gap:22px; align-items:flex-start; }
 
-  #profile .p-lead{ flex:1; }
+  .profile-doc .p-lead{ flex:1; }
 
-  #profile .p-lead-title{ font-size:17px; font-weight:700; margin:2px 0 6px; }
-  #profile .p-lead-title .p-phrase{ font-weight:400; font-style:italic; }
+  .profile-doc .p-lead-row{ display:flex; gap:12px; align-items:flex-start; }
+  .profile-doc .p-lead-row > div{ flex:1; }
 
-  #profile .p-pyramid{ width:225px; flex:none; padding-top:24px; }
-  #profile .p-pyr-row{ display:flex; justify-content:center; gap:4px; margin-bottom:4px; }
-  #profile .p-pyr-cell{
+  .profile-doc .p-card-img{
+    width:128px;
+    flex:none;
+    border-radius:8px;
+    display:block;
+  }
+
+  .profile-doc .p-lead-title{ font-size:17px; font-weight:700; margin:2px 0 6px; }
+  .profile-doc .p-lead-title .p-phrase{ font-weight:400; font-style:italic; }
+
+  .profile-doc .p-pyramid{ width:225px; flex:none; padding-top:24px; }
+  .profile-doc .p-pyr-row{ display:flex; justify-content:center; gap:4px; margin-bottom:4px; }
+  .profile-doc .p-pyr-cell{
     width:70px;
     border-radius:5px;
     font-size:8.5px;
@@ -581,22 +627,22 @@
     line-height:1.15;
   }
 
-  #profile p{ margin:0 0 6px; }
+  .profile-doc p{ margin:0 0 5px; }
 
-  #profile .p-cols{ display:flex; gap:18px; }
-  #profile .p-cols > div{ flex:1; }
+  .profile-doc .p-cols{ display:flex; gap:18px; }
+  .profile-doc .p-cols > div{ flex:1; }
 
-  #profile .p-working{
+  .profile-doc .p-working{
     border:1px solid #dcdcd8;
     border-radius:6px;
     padding:8px 12px;
     margin:2px 0;
   }
 
-  #profile .p-working p{ margin:0 0 4px; }
-  #profile .p-working p:last-child{ margin-bottom:0; }
+  .profile-doc .p-working p{ margin:0 0 4px; }
+  .profile-doc .p-working p:last-child{ margin-bottom:0; }
 
-  #profile .p-reflect{
+  .profile-doc .p-reflect{
     background:#F3D600;
     color:#111;
     border-radius:6px;
@@ -604,9 +650,9 @@
     margin:6px 0 8px;
   }
 
-  #profile .p-close{ font-size:11px; color:#555; }
+  .profile-doc .p-close{ font-size:11px; color:#555; }
 
-  #profile .p-footer{
+  .profile-doc .p-footer{
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -617,7 +663,7 @@
     color:#555;
   }
 
-  #profile .p-footer .p-mark{
+  .profile-doc .p-footer .p-mark{
     background:#F3D600;
     color:#111;
     font-weight:700;
@@ -691,6 +737,7 @@
   <div class="summary" id="summary">
     <h3>Your mix, ranked</h3>
     <ol id="summaryList"></ol>
+    <div id="profilePreview" class="profile-doc"></div>
     <button class="download-pdf" id="pdfBtn" type="button" hidden>Download my 1-pager (PDF)</button>
     <div><button class="print-profile" id="printBtn" type="button" hidden>or print this page</button></div>
     <div id="pdfNote" class="pdf-note" aria-live="polite"></div>
@@ -700,7 +747,8 @@
 
 </main>
 
-<div id="profile" aria-hidden="true"></div>
+<div id="profile" class="profile-doc" aria-hidden="true"></div>
+<div id="pdfOverlay" aria-hidden="true">Preparing your 1-pager…</div>
 
 <footer>
   nnherit Dynamics™ — Family Dynamics deck. Internal facilitation prototype.
@@ -935,7 +983,7 @@
     return { L, G, S, ranking, unchosen, interplay, leftOutConditional };
   }
 
-  function renderProfile(profile){
+  function profileHTML(profile){
     const card = id => CARDS.find(c=>c.id===id);
     const T = PROFILE_TEMPLATES;
     const { L, G, S, ranking, unchosen } = profile;
@@ -963,7 +1011,7 @@
     const leftOutNames = unchosen.map(id=>card(id).archetype).join(', ');
     const conditional = profile.leftOutConditional ? ' ' + profile.leftOutConditional : '';
 
-    document.getElementById('profile').innerHTML = `
+    return `
       <div class="p-header">
         <h1>${T.title}</h1>
         <span class="p-date">${dateStr}</span>
@@ -972,8 +1020,13 @@
         <div class="p-top">
           <div class="p-lead">
             <h2>Your lead pattern</h2>
-            <div class="p-lead-title">${L.archetype} — <span class="p-phrase">"${L.phrase}"</span></div>
-            <p><strong>In the family enterprise.</strong> ${L.inTheFamily}</p>
+            <div class="p-lead-row">
+              <img class="p-card-img" src="${L.frontImg}" alt="${L.archetype} card front">
+              <div>
+                <div class="p-lead-title">${L.archetype} — <span class="p-phrase">"${L.phrase}"</span></div>
+                <p><strong>In the family enterprise.</strong> ${L.inTheFamily}</p>
+              </div>
+            </div>
           </div>
           <div class="p-pyramid">${rows}</div>
         </div>
@@ -1006,6 +1059,10 @@
         </div>
       </div>
     `;
+  }
+
+  function renderProfile(profile){
+    document.getElementById('profile').innerHTML = profileHTML(profile);
   }
 
   const tray = document.getElementById('tray');
@@ -1325,6 +1382,17 @@
     pdfBtn.hidden = !fullPyramid;
     printBtn.hidden = !fullPyramid;
 
+    // On-page preview of the same profile the PDF will contain
+    const previewEl = document.getElementById('profilePreview');
+    if (fullPyramid){
+      const inputs = currentProfileInputs();
+      previewEl.innerHTML = profileHTML(buildProfile(inputs.ranking, inputs.unchosen));
+      previewEl.classList.add('show');
+    } else {
+      previewEl.classList.remove('show');
+      previewEl.innerHTML = '';
+    }
+
     if (complete){
       const firstReveal = !summary.classList.contains('show');
       summaryList.innerHTML = slotState.map((id,i)=>{
@@ -1392,27 +1460,40 @@
     renderProfile(buildProfile(ranking, unchosen));
 
     const profileEl = document.getElementById('profile');
+    const overlay = document.getElementById('pdfOverlay');
     pdfBtn.disabled = true;
     const prevLabel = pdfBtn.textContent;
     pdfBtn.textContent = 'Preparing your 1-pager…';
+    overlay.classList.add('show');
     profileEl.classList.add('generating');
 
-    loadPdfLibs().then(()=>{
+    // Card image must be fully loaded before capture
+    const imgs = Array.from(profileEl.querySelectorAll('img'));
+    const imagesReady = Promise.all(imgs.map(img=>{
+      if (img.complete) return Promise.resolve();
+      return new Promise(res=>{ img.onload = res; img.onerror = res; });
+    }));
+
+    loadPdfLibs().then(()=>imagesReady).then(()=>{
       return window.html2canvas(profileEl, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
     }).then((canvas)=>{
       const pdf = new window.jspdf.jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
       const pageW = 210;
       const imgH = canvas.height * pageW / canvas.width;
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageW, imgH);
+      const bytes = pdf.output('arraybuffer');
+      // A real capture of this page is hundreds of KB; a tiny file means the
+      // canvas came back blank (seen with stale/broken renderers) — fall back.
+      if (bytes.byteLength < 20000) throw new Error('blank capture');
       pdf.save('my-family-dynamics-pyramid.pdf');
-    }).then(()=>{
       showPdfNote('Downloaded — look for my-family-dynamics-pyramid.pdf in your downloads.');
     }).catch(()=>{
-      // CDN blocked or generation failed: same DOM, print dialog instead
-      showPdfNote('Couldn\'t load the PDF generator — opening the print dialog instead. Choose "Save as PDF" there.');
+      // CDN blocked or capture failed: same DOM, print dialog instead
+      showPdfNote('Couldn\'t generate the PDF directly — opening the print dialog instead. Choose "Save as PDF" there.');
       window.print();
     }).finally(()=>{
       profileEl.classList.remove('generating');
+      overlay.classList.remove('show');
       pdfBtn.disabled = false;
       pdfBtn.textContent = prevLabel;
     });
